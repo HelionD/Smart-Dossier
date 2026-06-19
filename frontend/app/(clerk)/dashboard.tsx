@@ -1,20 +1,19 @@
 import React from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Platform,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { cases } from '../api/services';
 import {
   Colors, Typography, Spacing, BorderRadius,
-  PHASE_LABELS, BOTTLENECK_PHASES,
+  PHASE_LABELS, PHASE_DESCRIPTIONS, BOTTLENECK_PHASES,
 } from '../constants/design';
 import { useAuthStore } from '../hooks/useAuthStore';
-import type { Case } from '../types';
 
 export default function DashboardScreen() {
-  const user = useAuthStore(s => s.user);
+  const user = useAuthStore((s) => s.user);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['stats'],
@@ -28,92 +27,155 @@ export default function DashboardScreen() {
     refetchInterval: 30_000,
   });
 
-  const blocked = items.filter(c => c.is_blocked);
+  const blocked = items.filter((c) => c.is_blocked);
+  const casesByPhase = stats?.cases_by_phase ??
+    items.reduce<Record<number, number>>((acc, c) => {
+      acc[c.current_phase] = (acc[c.current_phase] || 0) + 1;
+      return acc;
+    }, {});
 
   return (
     <View style={styles.root}>
-      {/* Navy header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerLabel}>Dashboard</Text>
-          <Text style={styles.headerName}>
-            Welcome, {user?.full_name.split(' ')[0]}
-          </Text>
-        </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>CLERK</Text>
-      </View>
-      </View>
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.secondary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stats */}
-        <View style={styles.statsGrid}>
-          <StatCard label="TOTAL ACTIVE CASES" value={statsLoading ? '—' : String(stats?.total_active ?? items.length)} />
-          <StatCard label="AVERAGE CYCLE TIME" value={statsLoading ? '—' : `${stats?.avg_cycle_days ?? '—'}d`} />
-          <StatCard label="HIGH LATENCY 14d+" value={statsLoading ? '—' : String(stats?.high_latency_count ?? blocked.length)} urgent />
-          <StatCard label="COMPLETION RATE" value={statsLoading ? '—' : `${stats?.completion_rate ?? '—'}%`} />
+        {/* Header */}
+        <View style={styles.topRow}>
+          <View style={styles.topLeft}>
+            <Text style={styles.kicker}>EKB PRIVATIZATION · 7 PHASES</Text>
+            <Text style={styles.pageTitle}>Registry Overview</Text>
+            <Text style={styles.pageSub}>Real-time monitoring of all active cases across all phases.</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.kanbanBtn}
+            onPress={() => router.push('./kanban')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.kanbanBtnIcon}>▦</Text>
+            <Text style={styles.kanbanBtnText}>Open Kanban</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Alert */}
+        {/* Stats grid */}
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="⊞"
+            iconBg={Colors.surfaceContainerHigh}
+            iconColor={Colors.primary}
+            label="TOTAL ACTIVE"
+            value={statsLoading ? '—' : String(stats?.total_active ?? items.length)}
+          />
+          <StatCard
+            icon="◷"
+            iconBg={Colors.surfaceContainerHigh}
+            iconColor={Colors.secondary}
+            label="AVG. CYCLE"
+            value={statsLoading ? '—' : `${stats?.avg_cycle_days ?? '—'}d`}
+          />
+          <StatCard
+            icon="⚑"
+            iconBg={Colors.errorContainer}
+            iconColor={Colors.onErrorContainer}
+            label="HIGH LATENCY"
+            value={statsLoading ? '—' : String(stats?.high_latency_count ?? blocked.length)}
+            urgent
+          />
+          <StatCard
+            icon="✓"
+            iconBg={Colors.surfaceContainerHigh}
+            iconColor={Colors.statusCompleted}
+            label="COMPLETION"
+            value={statsLoading ? '—' : `${stats?.completion_rate ?? '—'}%`}
+          />
+        </View>
+
+        {/* Alert banner */}
         {blocked.length > 0 && (
           <View style={styles.alert}>
-            <Text style={styles.alertTitle}>⚠  {blocked.length} cases with critical delays</Text>
-            <Text style={styles.alertSub}>Phases 3 and 6 are the main bottlenecks.</Text>
+            <Text style={styles.alertIcon}>⚠</Text>
+            <View style={styles.alertBody}>
+              <Text style={styles.alertTitle}>{blocked.length} cases with critical delays detected</Text>
+              <Text style={styles.alertSub}>
+                Phases 3 (ASHK Verification) and 6 (Submission to ASHK) are primary bottlenecks — avg delay 2–8 weeks.
+              </Text>
+            </View>
           </View>
         )}
 
-        {/* Cases by phase */}
-        <Text style={styles.sectionTitle}>Cases by Phase</Text>
+        {/* Cases by Phase */}
+        <View>
+          <Text style={styles.sectionTitle}>Cases by Phase</Text>
+          <View style={styles.phaseList}>
+            {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
+              const count = casesByPhase[phase] || 0;
+              const isBottleneck = BOTTLENECK_PHASES.includes(phase);
+              const isCompleted = phase === 7;
 
-        {isLoading ? (
-          <ActivityIndicator color={Colors.secondary} style={{ marginTop: 32 }} />
-        ) : (
-          [1, 2, 3, 4, 5, 6, 7].map(phase => {
-            const phaseCases = items.filter(c => c.current_phase === phase);
-            const isBottleneck = BOTTLENECK_PHASES.includes(phase);
-            return (
-              <View key={phase} style={styles.phaseGroup}>
-                <View style={styles.phaseHeader}>
-                  <Text style={[styles.phaseLabel, isBottleneck && styles.phaseLabelWarn]}>
-                    F{phase} — {PHASE_LABELS[phase]}
-                  </Text>
-                  <View style={[styles.phaseCount, isBottleneck && styles.phaseCountWarn]}>
-                    <Text style={[styles.phaseCountText, isBottleneck && styles.phaseCountTextWarn]}>
-                      {phaseCases.length}
+              return (
+                <View
+                  key={phase}
+                  style={[
+                    styles.phaseRow,
+                    isBottleneck && styles.phaseRowWarn,
+                    isCompleted && styles.phaseRowDone,
+                  ]}
+                >
+                  {/* F-badge */}
+                  <View style={[
+                    styles.fBadge,
+                    isBottleneck && styles.fBadgeWarn,
+                    isCompleted && styles.fBadgeDone,
+                  ]}>
+                    <Text style={styles.fBadgeText}>F{phase}</Text>
+                  </View>
+
+                  {/* Info */}
+                  <View style={styles.phaseInfo}>
+                    <View style={styles.phaseInfoTop}>
+                      <Text style={styles.phaseName}>{PHASE_LABELS[phase]}</Text>
+                      {isBottleneck && (
+                        <View style={styles.bottleneckChip}>
+                          <Text style={styles.bottleneckChipText}>
+                            BOTTLENECK {phase === 3 ? '2–4 wks' : '4–8 wks'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.phaseDesc}>{PHASE_DESCRIPTIONS[phase]}</Text>
+                  </View>
+
+                  {/* Count */}
+                  <View style={styles.phaseCountCol}>
+                    <Text style={[
+                      styles.phaseCount,
+                      isBottleneck && styles.phaseCountWarn,
+                      isCompleted && styles.phaseCountDone,
+                    ]}>
+                      {count}
                     </Text>
                   </View>
                 </View>
-                {phaseCases.slice(0, 3).map(c => (
-                  <CaseRow key={c.id} dosja={c} />
-                ))}
-                {phaseCases.length > 3 && (
-                  <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() => router.push({ pathname: '/(clerk)/cases', params: { phase: String(phase) } })}
-                  >
-                    <Text style={styles.moreBtnText}>+{phaseCases.length - 3} more →</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })
-        )}
+              );
+            })}
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
-function StatCard({ label, value, urgent }: { label: string; value: string; urgent?: boolean }) {
-  const icon = label.startsWith('TOTAL') ? '⊞' : label.startsWith('AVERAGE') ? '◎' : label.startsWith('HIGH') ? '⚠' : '✓';
+function StatCard({
+  icon, iconBg, iconColor, label, value, urgent,
+}: {
+  icon: string; iconBg: string; iconColor: string; label: string; value: string; urgent?: boolean;
+}) {
   return (
     <View style={[styles.statCard, urgent && styles.statCardUrgent]}>
-      <View style={[styles.statIconBox, urgent && styles.statIconBoxUrgent]}>
-        <Text style={[styles.statIcon, urgent && styles.statIconUrgent]}>{icon}</Text>
+      <View style={[styles.statIconBox, { backgroundColor: iconBg }]}>
+        <Text style={[styles.statIcon, { color: iconColor }]}>{icon}</Text>
       </View>
       <View style={styles.statInfo}>
         <Text style={[styles.statLabel, urgent && styles.statLabelUrgent]}>{label}</Text>
@@ -122,84 +184,188 @@ function StatCard({ label, value, urgent }: { label: string; value: string; urge
     </View>
   );
 }
-function CaseRow({ dosja }: { dosja: Case }) {
-  return (
-    <TouchableOpacity
-      style={[styles.caseRow, dosja.is_blocked && styles.caseRowBlocked]}
-      onPress={() => router.push({ pathname: '/(clerk)/case-detail', params: { id: dosja.id } })}
-      activeOpacity={0.75}
-    >
-      <View style={styles.caseLeft}>
-        <Text style={styles.caseCode}>{dosja.code}</Text>
-        <Text style={styles.caseTitle} numberOfLines={1}>{dosja.title}</Text>
-      </View>
-      <View style={styles.caseRight}>
-        {dosja.is_blocked && (
-          <View style={styles.blockedChip}>
-            <Text style={styles.blockedChipText}>BLOCKED</Text>
-          </View>
-        )}
-        <Text style={[styles.days, dosja.is_blocked && styles.daysUrgent]}>
-          {dosja.days_in_phase}d
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: Platform.select({ ios: 60, default: 48 }),
-    paddingBottom: 20,
-    paddingHorizontal: Spacing.marginPage,
+  scroll: { flex: 1 },
+  content: {
+    padding: Spacing.marginPage,
+    gap: 24,
+    paddingBottom: 32,
+    maxWidth: 1280,
+    width: '100%',
+    alignSelf: 'center' as const,
+  },
+
+  // Header row
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    flexWrap: 'wrap',
+    gap: 16,
   },
-  headerLabel: { ...Typography.labelCaps, color: Colors.onPrimaryContainer, marginBottom: 4 },
-  headerName: { ...Typography.headlineMdMobile, color: Colors.onPrimary },
-  badge: { backgroundColor: Colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 5, borderRadius: BorderRadius.full },
-  badgeText: { ...Typography.labelCaps, color: Colors.inversePrimary },
-  scroll: { flex: 1 },
-  content: { padding: Spacing.marginPage, gap: Spacing.stackMd, paddingBottom: 32 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  statCard: { flex: 1, minWidth: '45%', backgroundColor: Colors.surfaceContainerLowest, borderRadius: BorderRadius.lg, padding: 12, borderWidth: 1, borderColor: Colors.outlineVariant, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  statCardUrgent: { borderColor: Colors.error, borderWidth: 1.5 },
-  statIconBox: { width: 40, height: 40, borderRadius: BorderRadius.lg, backgroundColor: Colors.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
-  statIconBoxUrgent: { backgroundColor: Colors.errorContainer },
-  statIcon: { fontSize: 18, color: Colors.onSurfaceVariant },
-  statIconUrgent: { color: Colors.error },
-  statInfo: { flex: 1 },
-  statLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, marginBottom: 2, fontSize: 9 },
-  statLabelUrgent: { color: Colors.error },
-  statValue: { ...Typography.headlineMd, color: Colors.onSurface, fontSize: 20 },
-  statValueUrgent: { color: Colors.error },
-  alert: { backgroundColor: Colors.statusInReviewBg, borderLeftWidth: 4, borderLeftColor: Colors.statusInReview, borderRadius: BorderRadius.md, padding: 14, gap: 4 },
-  alertTitle: { ...Typography.bodySm, color: Colors.statusInReview, fontFamily: 'Inter_600SemiBold' },
-  alertSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12 },
-  sectionTitle: { ...Typography.headlineSm, color: Colors.onSurface },
-  phaseGroup: { gap: 6 },
-  phaseHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  phaseLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, flex: 1 },
-  phaseLabelWarn: { color: Colors.statusInReview },
-  phaseCount: { backgroundColor: Colors.surfaceContainerHigh, borderRadius: BorderRadius.full, paddingHorizontal: 8, paddingVertical: 2 },
-  phaseCountWarn: { backgroundColor: Colors.statusInReviewBg },
-  phaseCountText: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 9 },
-  phaseCountTextWarn: { color: Colors.statusInReview },
-  caseRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surfaceContainerLowest, borderRadius: BorderRadius.lg, padding: 14, borderWidth: 1, borderColor: Colors.outlineVariant },
-  caseRowBlocked: { borderColor: Colors.error, borderWidth: 1.5 },
-  caseLeft: { flex: 1, gap: 3 },
-  caseCode: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 9 },
-  caseTitle: { ...Typography.bodySm, color: Colors.onSurface },
-  caseRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  blockedChip: { backgroundColor: Colors.statusBlockedBg, borderRadius: BorderRadius.sm, paddingHorizontal: 6, paddingVertical: 3 },
-  blockedChipText: { ...Typography.labelCaps, color: Colors.statusBlocked, fontSize: 8 },
-  days: { ...Typography.labelCaps, color: Colors.onSurfaceVariant },
-  daysUrgent: { color: Colors.error },
-  moreBtn: { alignItems: 'center', paddingVertical: 8 },
-  moreBtnText: { ...Typography.bodySm, color: Colors.secondary, fontFamily: 'Inter_600SemiBold', fontSize: 13 },
-});
+  topLeft: { gap: 4 },
+  kicker: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 10 },
+  pageTitle: { ...Typography.displayLg, color: Colors.primary, fontSize: 30 },
+  pageSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 2 },
+  kanbanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  kanbanBtnIcon: { fontSize: 18, color: Colors.onSecondary },
+  kanbanBtnText: {
+    ...Typography.bodySm,
+    color: Colors.onSecondary,
+    fontFamily: 'Inter_500Medium',
+  },
 
-import { Platform } from 'react-native';
+  // Stats
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: 200,
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: BorderRadius.xl,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    gap: 12,
+  },
+  statCardUrgent: { borderColor: Colors.error, borderWidth: 2 },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statIcon: { fontSize: 18 },
+  statInfo: { gap: 2 },
+  statLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  statLabelUrgent: { color: Colors.error },
+  statValue: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 30,
+    color: Colors.primary,
+    lineHeight: 34,
+  },
+  statValueUrgent: { color: Colors.error },
+
+  // Alert
+  alert: {
+    backgroundColor: Colors.statusInReviewBg,
+    borderWidth: 1,
+    borderColor: Colors.statusInReview,
+    borderLeftWidth: 4,
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  alertIcon: { fontSize: 18, color: Colors.statusInReview, marginTop: 1 },
+  alertBody: { flex: 1, gap: 4 },
+  alertTitle: {
+    ...Typography.bodySm,
+    color: Colors.statusInReview,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  alertSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12 },
+
+  // Section
+  sectionTitle: {
+    ...Typography.headlineSm,
+    color: Colors.primary,
+    marginBottom: 0,
+  },
+
+  // Phase rows
+  phaseList: { gap: 0 },
+  phaseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  phaseRowWarn: { borderColor: Colors.statusInReview, borderWidth: 2 },
+  phaseRowDone: { borderColor: Colors.statusCompleted },
+
+  // F-badge
+  fBadge: {
+    width: 56,
+    alignSelf: 'stretch',
+    backgroundColor: Colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fBadgeWarn: { backgroundColor: Colors.statusInReview },
+  fBadgeDone: { backgroundColor: Colors.statusCompleted },
+  fBadgeText: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 14,
+    color: Colors.onSecondary,
+  },
+
+  // Phase info
+  phaseInfo: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 4,
+  },
+  phaseInfoTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  phaseName: {
+    ...Typography.bodySm,
+    color: Colors.onSurface,
+    fontFamily: 'Inter_500Medium',
+  },
+  bottleneckChip: {
+    backgroundColor: Colors.statusInReviewBg,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  bottleneckChipText: {
+    ...Typography.labelCaps,
+    color: Colors.statusInReview,
+    fontSize: 8,
+  },
+  phaseDesc: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+  },
+
+  // Phase count
+  phaseCountCol: {
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  phaseCount: {
+    fontFamily: 'HankenGrotesk_700Bold',
+    fontSize: 20,
+    color: Colors.onSurface,
+  },
+  phaseCountWarn: { color: Colors.statusInReview },
+  phaseCountDone: { color: Colors.statusCompleted },
+});

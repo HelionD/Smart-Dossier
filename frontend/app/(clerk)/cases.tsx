@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Platform } from 'react-native';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, ActivityIndicator, RefreshControl,
@@ -92,43 +93,43 @@ export default function CasesScreen() {
             <Text style={styles.emptyText}>No cases found</Text>
           </View>
         ) : (
-          filtered.map(c => <CaseItem key={c.id} dosja={c} />)
+          filtered.map(c => <CaseItem key={c.id} caseItem={c} />)
         )}
       </ScrollView>
     </View>
   );
 }
 
-function CaseItem({ dosja }: { dosja: Case }) {
-  const isBottleneck = BOTTLENECK_PHASES.includes(dosja.current_phase);
+function CaseItem({ caseItem }: { caseItem: Case }) {
+  const isBottleneck = BOTTLENECK_PHASES.includes(caseItem.current_phase);
   return (
     <TouchableOpacity
-      style={[styles.item, dosja.is_blocked && styles.itemBlocked]}
-      onPress={() => router.push({ pathname: '/(clerk)/case-detail', params: { id: dosja.id } })}
+      style={[styles.item, caseItem.is_blocked && styles.itemBlocked]}
+      onPress={() => router.push({ pathname: '/(clerk)/case-detail', params: { id: caseItem.id } })}
       activeOpacity={0.75}
     >
       <View style={styles.itemTop}>
-        <Text style={styles.itemCode}>{dosja.code}</Text>
+        <Text style={styles.itemCode}>{caseItem.code}</Text>
         <View style={[styles.phaseBadge, isBottleneck && styles.phaseBadgeWarn]}>
           <Text style={[styles.phaseBadgeText, isBottleneck && styles.phaseBadgeTextWarn]}>
-            F{dosja.current_phase}
+            F{caseItem.current_phase}
           </Text>
         </View>
       </View>
-      <Text style={styles.itemTitle} numberOfLines={1}>{dosja.title}</Text>
-      {dosja.owner_name && (
-        <Text style={styles.itemOwner}>{dosja.owner_name}</Text>
+      <Text style={styles.itemTitle} numberOfLines={1}>{caseItem.title}</Text>
+      {caseItem.owner_name && (
+        <Text style={styles.itemOwner}>{caseItem.owner_name}</Text>
       )}
       <View style={styles.itemBottom}>
-        <Text style={styles.itemPhaseLabel}>{PHASE_LABELS[dosja.current_phase]}</Text>
+        <Text style={styles.itemPhaseLabel}>{PHASE_LABELS[caseItem.current_phase]}</Text>
         <View style={styles.itemRight}>
-          {dosja.is_blocked && (
+          {caseItem.is_blocked && (
             <View style={styles.blockedChip}>
               <Text style={styles.blockedChipText}>BLOCKED</Text>
             </View>
           )}
-          <Text style={[styles.itemDays, dosja.is_blocked && styles.itemDaysUrgent]}>
-            {dosja.days_in_phase} days
+          <Text style={[styles.itemDays, caseItem.is_blocked && styles.itemDaysUrgent]}>
+            {caseItem.days_in_phase} days
           </Text>
         </View>
       </View>
@@ -189,4 +190,3 @@ const styles = StyleSheet.create({
   itemDaysUrgent: { color: Colors.error },
 });
 
-import { Platform } from 'react-native';

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/design';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -33,10 +34,9 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <Text style={styles.name}>{user?.full_name}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>
-              {user?.role === 'clerk' ? '🏛 CLERK' : '👤 CITIZEN'}
+              {user?.role === 'clerk' ? 'CLERK' : 'CITIZEN'}
             </Text>
           </View>
         </View>
@@ -46,7 +46,7 @@ export default function ProfileScreen() {
           <InfoRow label="Full Name" value={user?.full_name ?? '—'} />
           <InfoRow label="Email" value={user?.email ?? '—'} />
           <InfoRow label="Role" value={user?.role === 'clerk' ? 'Clerk' : 'Citizen'} />
-          <InfoRow label="ID" value={user?.id.slice(0, 8) + '…' ?? '—'} last />
+          <InfoRow label="ID" value={user?.id ? user.id.slice(0, 8) + '\u2026' : '\u2014'} last />
         </View>
 
         {/* App info */}
@@ -100,4 +100,3 @@ const styles = StyleSheet.create({
   logoutBtnText: { ...Typography.headlineSm, color: Colors.onErrorContainer, fontSize: 15 },
 });
 
-import { Platform } from 'react-native';

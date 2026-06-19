@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Platform } from 'react-native';
 import {
   View, Text, ScrollView, StyleSheet, TextInput,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -159,4 +160,3 @@ const styles = StyleSheet.create({
   requiredNote: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12, textAlign: 'center' },
 });
 
-import { Platform } from 'react-native';

@@ -70,7 +70,7 @@ export default function RegisterScreen() {
                   onPress={() => setRole(r)}
                 >
                   <Text style={[styles.roleBtnText, role === r && styles.roleBtnTextActive]}>
-                    {r === 'citizen' ? '👤 Citizen' : '🏛 Clerk'}
+                    {r === 'citizen' ? 'Citizen' : 'Clerk'}
                   </Text>
                 </TouchableOpacity>
               ))}

@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  TextInput, ActivityIndicator, Alert, useWindowDimensions, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,13 +12,16 @@ import {
 } from '../constants/design';
 import * as DocumentPicker from 'expo-document-picker';
 
-type Tab = 'summary' | 'documents' | 'workflow' | 'ai';
+type Tab = 'summary' | 'extracted' | 'ai' | 'advance';
 
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [tab, setTab] = useState<Tab>('summary');
   const [advanceNotes, setAdvanceNotes] = useState('');
   const qc = useQueryClient();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+  const sideWidth = isDesktop ? 320 : undefined;
 
   const { data: caseItem, isLoading } = useQuery({
     queryKey: ['case', id],
@@ -34,13 +31,11 @@ export default function CaseDetailScreen() {
   const { data: history = [] } = useQuery({
     queryKey: ['history', id],
     queryFn: () => cases.phaseHistory(id),
-    enabled: tab === 'workflow',
   });
 
   const { data: docs = [] } = useQuery({
     queryKey: ['docs', id],
     queryFn: () => documents.list(id),
-    enabled: tab === 'documents',
   });
 
   const { data: summary, isFetching: summaryLoading, refetch: fetchSummary } = useQuery({
@@ -73,361 +68,757 @@ export default function CaseDetailScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.caseCode}>{caseItem.code}</Text>
-          <Text style={styles.caseTitle} numberOfLines={1}>{caseItem.title}</Text>
-        </View>
-        {isBlocked && <View style={styles.blockedBadge}><Text style={styles.blockedBadgeText}>BLLOKUAR</Text></View>}
-      </View>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <Text style={styles.backArrow}>← Back to cases</Text>
+      </TouchableOpacity>
 
-      {/* Phase progress strip */}
-      <View style={styles.phaseStrip}>
-        {[1,2,3,4,5,6,7].map((p) => (
-          <View
-            key={p}
-            style={[
-              styles.phaseNode,
-              p < caseItem.current_phase && styles.phaseNodeDone,
-              p === caseItem.current_phase && styles.phaseNodeActive,
-              BOTTLENECK_PHASES.includes(p) && p === caseItem.current_phase && styles.phaseNodeBottleneck,
-            ]}
-          >
-            <Text style={[
-              styles.phaseNodeText,
-              p <= caseItem.current_phase && styles.phaseNodeTextDone,
-            ]}>
-              {p < caseItem.current_phase ? '✓' : String(p)}
-            </Text>
-          </View>
-        ))}
-      </View>
-      <Text style={styles.phaseCurrentLabel}>
-        Phase {caseItem.current_phase}: {PHASE_LABELS[caseItem.current_phase]} · {caseItem.days_in_phase}d
-      </Text>
-      {/* Tabs */}
-      <View style={styles.tabBar}>
-        {(['summary', 'documents', 'workflow', 'ai'] as Tab[]).map((t) => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.tab, tab === t && styles.tabActive]}
-            onPress={() => setTab(t)}
-          >
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-              {t === 'summary' ? 'Summary' :
-               t === 'documents' ? 'Documents' :
-               t === 'workflow' ? 'Workflow' : 'AI ✦'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <View style={[styles.body, isDesktop && styles.bodyDesktop]}>
+        {/* ── LEFT PANEL ── */}
+        <View style={[styles.leftPanel, sideWidth ? { width: sideWidth } : undefined]}>
+          <ScrollView style={styles.leftScroll} contentContainerStyle={styles.leftContent}>
+            {/* Case header */}
+            <View style={styles.caseHeader}>
+              <Text style={styles.caseCode}>{caseItem.code}</Text>
+              <Text style={styles.caseTitle}>{caseItem.title}</Text>
+              {isBlocked && (
+                <View style={styles.blockedRow}>
+                  <View style={styles.blockedChip}>
+                    <Text style={styles.blockedChipText}>BLOCKED · F{caseItem.current_phase}</Text>
+                  </View>
+                  <Text style={styles.blockedDays}>{caseItem.days_in_phase} days</Text>
+                </View>
+              )}
+            </View>
 
-      <ScrollView style={styles.tabContent} contentContainerStyle={{ padding: Spacing.marginPage, gap: 14 }}>
-        {/* ── Summary ── */}
-        {tab === 'summary' && (
-          <>
-            <InfoCard label="Applicant" value={caseItem.owner_name ?? '—'} />
-            <InfoCard label="Property ID" value={caseItem.property_id ?? '—'} />
-            <InfoCard label="Zone" value={caseItem.zone ?? '—'} />
-            <InfoCard label="Income bracket" value={caseItem.income_bracket ?? '—'} />
-            <InfoCard label="Status" value={caseItem.status.toUpperCase()} highlight />
-            <InfoCard label="Created" value={new Date(caseItem.created_at).toLocaleDateString('en-GB')} />
-          </>
-        )}
+            {/* Phase tracker */}
+            <View style={styles.phaseTracker}>
+              <Text style={styles.trackerTitle}>
+                WORKFLOW STATUS · {caseItem.current_phase}/7
+              </Text>
+              <View style={styles.timeline}>
+                {[1, 2, 3, 4, 5, 6, 7].map((phase, i) => {
+                  const done = phase < caseItem.current_phase;
+                  const active = phase === caseItem.current_phase;
+                  const pending = phase > caseItem.current_phase;
 
-        {/* ── Documents ── */}
-        {tab === 'documents' && (
-          <>
-            <TouchableOpacity
-              style={styles.uploadBtn}
-              onPress={async () => {
-                const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'] });
-                if (!result.canceled && result.assets[0]) {
-                  const file = result.assets[0];
-                  await documents.upload(id, { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' });
-                  qc.invalidateQueries({ queryKey: ['docs', id] });
-                }
-              }}
-            >
-              <Text style={styles.uploadBtnText}>+ Upload document</Text>
-            </TouchableOpacity>
-            {docs.map((doc) => (
-              <View key={doc.id} style={styles.docCard}>
-                <Text style={styles.docName}>{doc.filename}</Text>
-                {doc.extracted_data && (
-                  <View style={styles.extractedFields}>
-                    <Text style={styles.extractedLabel}>Extracted data</Text>
-                    {Object.entries(doc.extracted_data).map(([k, v]) =>
-                      v != null ? (
-                        <Text key={k} style={styles.extractedRow}>
-                          <Text style={styles.extractedKey}>{k}: </Text>{String(v)}
+                  if (pending && phase > caseItem.current_phase + 1 && phase < 7) return null;
+                  if (pending && phase === 5 && caseItem.current_phase < 3) {
+                    // Collapsed future phases
+                    return (
+                      <View key="future" style={styles.timelineRow}>
+                        {phase < 7 && (
+                          <View style={[styles.phaseLine, done ? styles.phaseLineDone : styles.phaseLinePending]} />
+                        )}
+                        <View style={[styles.phaseDot, styles.phaseDotPending]}>
+                          <Text style={styles.phaseDotNum}>{caseItem.current_phase + 1}–7</Text>
+                        </View>
+                        <View style={styles.phaseContent}>
+                          <Text style={styles.phaseContentPending}>
+                            Signing · Submission · Registration
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <View key={phase} style={styles.timelineRow}>
+                      {phase < 7 && (
+                        <View style={[
+                          styles.phaseLine,
+                          done ? styles.phaseLineDone : styles.phaseLinePending,
+                        ]} />
+                      )}
+                      <View style={[
+                        styles.phaseDot,
+                        done && styles.phaseDotDone,
+                        active && (isBlocked ? styles.phaseDotBlocked : styles.phaseDotActive),
+                        pending && styles.phaseDotPending,
+                      ]}>
+                        {done ? (
+                          <Text style={styles.phaseDotCheck}>✓</Text>
+                        ) : (
+                          <Text style={[
+                            styles.phaseDotNum,
+                            active && styles.phaseDotNumActive,
+                          ]}>
+                            {phase}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.phaseContent}>
+                        <Text style={[
+                          styles.phaseName,
+                          done && styles.phaseNameDone,
+                          active && (isBlocked ? styles.phaseNameBlocked : styles.phaseNameActive),
+                          pending && styles.phaseNamePending,
+                        ]}>
+                          {PHASE_LABELS[phase]}
                         </Text>
-                      ) : null
-                    )}
-                    {!doc.confirmed && (
-                      <TouchableOpacity
-                        style={styles.confirmBtn}
-                        onPress={() => documents.confirmExtraction(doc.id)}
-                      >
-                        <Text style={styles.confirmBtnText}>Confirm extraction</Text>
-                      </TouchableOpacity>
-                    )}
+                        {done && (
+                          <Text style={styles.phaseMeta}>
+                            {history.find((h) => h.phase === phase && h.exited_at)?.exited_at
+                              ? `Completed ${new Date(history.find((h) => h.phase === phase && h.exited_at)!.exited_at!).toLocaleDateString('en-GB')}`
+                              : 'Completed'}
+                          </Text>
+                        )}
+                        {active && (
+                          <Text style={[styles.phaseMeta, isBlocked && styles.phaseMetaBlocked]}>
+                            {caseItem.days_in_phase} days — {isBlocked ? 'awaiting response' : 'in progress'}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Documents */}
+            <View style={styles.docSection}>
+              <View style={styles.docHeader}>
+                <Text style={styles.docTitle}>DOCUMENTS</Text>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'] });
+                    if (!result.canceled && result.assets[0]) {
+                      const file = result.assets[0];
+                      await documents.upload(id, { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' });
+                      qc.invalidateQueries({ queryKey: ['docs', id] });
+                    }
+                  }}
+                >
+                  <Text style={styles.docUploadLink}>+ Upload</Text>
+                </TouchableOpacity>
+              </View>
+              {docs.map((doc) => (
+                <View key={doc.id} style={[styles.docCard, doc.confirmed && styles.docCardActive]}>
+                  <Text style={styles.docIcon}>📄</Text>
+                  <View style={styles.docInfo}>
+                    <Text style={styles.docName} numberOfLines={1}>{doc.filename}</Text>
+                    <Text style={styles.docMeta}>
+                      {doc.confirmed ? 'Verified' : 'In Review'}
+                    </Text>
+                  </View>
+                  <View style={[styles.docDot, doc.confirmed ? styles.docDotDone : styles.docDotActive]} />
+                </View>
+              ))}
+              {docs.length === 0 && (
+                <Text style={styles.docEmpty}>No documents uploaded</Text>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* ── CENTER / MAIN CONTENT ── */}
+        <View style={styles.mainPanel}>
+          {/* Tabs */}
+          <View style={styles.tabBar}>
+            {([
+              ['summary', 'Summary'],
+              ['extracted', 'Extracted Data'],
+              ['ai', 'AI Analysis'],
+              ['advance', 'Advance Phase'],
+            ] as [Tab, string][]).map(([t, label]) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.tab, tab === t && styles.tabActive]}
+                onPress={() => setTab(t)}
+              >
+                <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <ScrollView style={styles.tabBody} contentContainerStyle={styles.tabBodyContent}>
+            {/* ── Summary ── */}
+            {tab === 'summary' && (
+              <>
+                {isBlocked && (
+                  <View style={styles.delayAlert}>
+                    <Text style={styles.delayAlertIcon}>⚠</Text>
+                    <View style={styles.delayAlertBody}>
+                      <Text style={styles.delayAlertTitle}>
+                        Critical Delay — Phase {caseItem.current_phase} Bottleneck
+                      </Text>
+                      <Text style={styles.delayAlertText}>
+                        This case has been in {PHASE_LABELS[caseItem.current_phase]} for {caseItem.days_in_phase} days.
+                        Expected duration is 14 days. Escalation recommended.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                <View style={styles.infoGrid}>
+                  <InfoField label="Applicant" value={caseItem.owner_name ?? '—'} />
+                  <InfoField label="Property ID" value={caseItem.property_id ?? '—'} mono />
+                  <InfoField label="Zone" value={caseItem.zone ?? '—'} />
+                  <InfoField label="Income Bracket" value={caseItem.income_bracket ?? '—'} />
+                  <InfoField label="Created" value={new Date(caseItem.created_at).toLocaleDateString('en-GB')} />
+                  <InfoField label="Assigned To" value={caseItem.assigned_to ?? 'Unassigned'} />
+                </View>
+              </>
+            )}
+
+            {/* ── Extracted Data ── */}
+            {tab === 'extracted' && (
+              <View style={styles.extractedCard}>
+                <View style={styles.extractedHeader}>
+                  <Text style={styles.extractedTitle}>AI EXTRACTED FIELDS</Text>
+                </View>
+                {docs.some((d) => d.extracted_data) ? (
+                  docs.filter((d) => d.extracted_data).map((doc) => (
+                    <View key={doc.id}>
+                      {Object.entries(doc.extracted_data!).map(([key, val]) =>
+                        val != null ? (
+                          <View key={key} style={styles.extractedRow}>
+                            <Text style={styles.extractedKey}>"{key}"</Text>
+                            <Text style={styles.extractedVal}>
+                              {typeof val === 'string' ? `"${val}"` : String(val)}
+                            </Text>
+                          </View>
+                        ) : null
+                      )}
+                      {!doc.confirmed && (
+                        <TouchableOpacity
+                          style={styles.confirmBtn}
+                          onPress={() => documents.confirmExtraction(doc.id)}
+                        >
+                          <Text style={styles.confirmBtnText}>
+                            Confirm extraction → Apply to case
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.extractedEmpty}>
+                    Upload and process documents to see extracted fields.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* ── AI Analysis ── */}
+            {tab === 'ai' && (
+              <View style={styles.aiSection}>
+                <TouchableOpacity
+                  style={styles.aiBtn}
+                  onPress={() => fetchSummary()}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.aiBtnIcon}>✦</Text>
+                  <Text style={styles.aiBtnText}>Analyse case with AI</Text>
+                </TouchableOpacity>
+
+                {summaryLoading && (
+                  <View style={styles.aiLoading}>
+                    <ActivityIndicator color={Colors.secondary} />
+                    <Text style={styles.aiLoadingText}>Analysing…</Text>
+                  </View>
+                )}
+
+                {summary && !summaryLoading && (
+                  <View style={styles.aiResult}>
+                    <Text style={styles.aiResultLabel}>AI ANALYSIS · LLAMA 3.2</Text>
+                    <Text style={styles.aiResultText}>{summary}</Text>
+                  </View>
+                )}
+
+                {BOTTLENECK_PHASES.includes(caseItem.current_phase) && (
+                  <View style={styles.bottleneckNote}>
+                    <Text style={styles.bottleneckNoteTitle}>
+                      ⚠ Phase {caseItem.current_phase} — Known Bottleneck
+                    </Text>
+                    <Text style={styles.bottleneckNoteText}>
+                      {caseItem.current_phase === 3
+                        ? 'ASHK Verification historically causes 2–4 week delays due to manual cross-reference with the regional property registry. Consider proactive follow-up after day 10.'
+                        : 'Submission to ASHK involves physical file transfer with 4–8 week delays and risk of loss. Consider digital submission alternatives.'}
+                    </Text>
                   </View>
                 )}
               </View>
-            ))}
-          </>
-        )}
+            )}
 
-        {/* ── Workflow ── */}
-        {tab === 'workflow' && (
-          <>
-            {history.map((log, i) => (
-              <View key={log.id} style={styles.logRow}>
-                <View style={[styles.logDot, !log.exited_at && styles.logDotActive]} />
-                {i < history.length - 1 && <View style={styles.logLine} />}
-                <View style={styles.logContent}>
-                  <Text style={styles.logPhase}>F{log.phase} — {PHASE_LABELS[log.phase]}</Text>
-                  <Text style={styles.logDate}>{new Date(log.entered_at).toLocaleDateString('en-GB')}</Text>
-                  {log.notes && <Text style={styles.logNotes}>{log.notes}</Text>}
-                </View>
-              </View>
-            ))}
-
-            {canAdvance && (
+            {/* ── Advance Phase ── */}
+            {tab === 'advance' && (
               <View style={styles.advanceCard}>
-                <Text style={styles.advanceTitle}>Advance to phase {caseItem.current_phase + 1}</Text>
-                <Text style={styles.advanceSub}>{PHASE_DESCRIPTIONS[caseItem.current_phase + 1]}</Text>
-                <TextInput
-                  style={styles.notesInput}
-                  placeholder="Notes (optional)..."
-                  placeholderTextColor={Colors.outline}
-                  value={advanceNotes}
-                  onChangeText={setAdvanceNotes}
-                  multiline
-                  numberOfLines={3}
-                />
-                <TouchableOpacity
-                  style={styles.advanceBtn}
-                  onPress={() => {
-                    Alert.alert(
-                      'Confirm phase change',
-                      `Move from phase ${caseItem.current_phase} to phase ${caseItem.current_phase + 1}?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Confirm', onPress: () => advanceMutation.mutate(caseItem.current_phase + 1) },
-                      ]
-                    );
-                  }}
-                  disabled={advanceMutation.isPending}
-                >
-                  {advanceMutation.isPending
-                    ? <ActivityIndicator color={Colors.onSecondary} size="small" />
-                    : <Text style={styles.advanceBtnText}>Advance to phase {caseItem.current_phase + 1} →</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
-        )}
+                <View>
+                  <Text style={styles.advanceTitle}>
+                    Advance to Phase {caseItem.current_phase + 1}
+                  </Text>
+                  <Text style={styles.advanceSub}>
+                    {PHASE_DESCRIPTIONS[caseItem.current_phase + 1]}
+                  </Text>
+                </View>
 
-        {/* ── AI ── */}
-        {tab === 'ai' && (
-          <>
-            <TouchableOpacity style={styles.aiBtn} onPress={() => fetchSummary()}>
-              <Text style={styles.aiBtnText}>✦  Analyse case with AI</Text>
-            </TouchableOpacity>
-            {summaryLoading && (
-              <View style={styles.skeletonBox}>
-                <ActivityIndicator color={Colors.secondary} />
-                <Text style={styles.skeletonText}>Analysing…</Text>
+                <View style={styles.checklistCard}>
+                  <Text style={styles.checklistTitle}>CURRENT CHECKLIST BEFORE ADVANCING</Text>
+                  {canAdvance ? (
+                    <>
+                      <View style={styles.checkItem}>
+                        <Text style={styles.checkOk}>✓</Text>
+                        <Text style={styles.checkOkText}>Documents uploaded and verified</Text>
+                      </View>
+                      <View style={styles.checkItem}>
+                        <Text style={styles.checkFail}>✕</Text>
+                        <Text style={styles.checkFailText}>
+                          {caseItem.current_phase === 3
+                            ? 'ASHK verification response pending'
+                            : 'Phase requirements not fully met'}
+                        </Text>
+                      </View>
+                      <View style={styles.checkItem}>
+                        <Text style={styles.checkFail}>✕</Text>
+                        <Text style={styles.checkFailText}>Conflict check not cleared</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={styles.checkNone}>Case is in final phase — no further advancement needed.</Text>
+                  )}
+                </View>
+
+                {canAdvance && (
+                  <>
+                    <View>
+                      <Text style={styles.notesLabel}>NOTES FOR THIS TRANSITION</Text>
+                      <TextInput
+                        style={styles.notesInput}
+                        value={advanceNotes}
+                        onChangeText={setAdvanceNotes}
+                        placeholder="Optional: Add transition notes..."
+                        placeholderTextColor={Colors.outline}
+                        multiline
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.advanceBtn, advanceMutation.isPending && styles.advanceBtnDisabled]}
+                      onPress={() => {
+                        Alert.alert(
+                          'Confirm phase change',
+                          `Move from phase ${caseItem.current_phase} to phase ${caseItem.current_phase + 1}?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Confirm', onPress: () => advanceMutation.mutate(caseItem.current_phase + 1) },
+                          ]
+                        );
+                      }}
+                      disabled={advanceMutation.isPending}
+                      activeOpacity={0.85}
+                    >
+                      {advanceMutation.isPending ? (
+                        <ActivityIndicator color={Colors.onSecondary} size="small" />
+                      ) : (
+                        <Text style={styles.advanceBtnText}>
+                          Confirm advance to Phase {caseItem.current_phase + 1} →
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
-            {summary && !summaryLoading && (
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>AI ANALYSIS</Text>
-                <Text style={styles.summaryText}>{summary}</Text>
-              </View>
-            )}
-            {BOTTLENECK_PHASES.includes(caseItem.current_phase) && (
-              <View style={styles.bottleneckWarning}>
-                <Text style={styles.bottleneckTitle}>⚠  High-risk delay phase</Text>
-                <Text style={styles.bottleneckBody}>
-                  Phase {caseItem.current_phase} historically experiences delays of{' '}
-                  {caseItem.current_phase === 3 ? '2–4 weeks' : '4–8 weeks'} due to manual processing.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
+          </ScrollView>
+        </View>
+      </View>
     </View>
   );
 }
 
-function InfoCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function InfoField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <View style={styles.infoCard}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={[styles.infoValue, highlight && styles.infoValueHighlight]}>{value}</Text>
+    <View style={styles.infoField}>
+      <Text style={styles.infoFieldLabel}>{label}</Text>
+      <Text style={[styles.infoFieldValue, mono && styles.infoFieldMono]}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: 60,
-    paddingBottom: 16,
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
+  backBtn: {
     paddingHorizontal: Spacing.marginPage,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-  backBtn: { paddingBottom: 2 },
-  backArrow: { color: Colors.inversePrimary, fontSize: 22 },
-  headerInfo: { flex: 1 },
-  caseCode: { ...Typography.labelCaps, color: Colors.inversePrimary, marginBottom: 2 },
-  caseTitle: { ...Typography.headlineSm, color: Colors.onPrimary },
-  blockedBadge: { backgroundColor: Colors.error, borderRadius: BorderRadius.sm, paddingHorizontal: 8, paddingVertical: 4 },
-  blockedBadgeText: { ...Typography.labelCaps, color: Colors.onError, fontSize: 9 },
-  phaseStrip: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryContainer,
-    paddingVertical: 14,
-    paddingHorizontal: Spacing.marginPage,
-    gap: 4,
-  },
-  phaseNode: {
-    width: 28,
-    height: 28,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.primary,
-    borderWidth: 1,
-    borderColor: Colors.onPrimaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  phaseNodeDone: { backgroundColor: Colors.statusCompleted, borderColor: Colors.statusCompleted },
-  phaseNodeActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary, width: 32, height: 32 },
-  phaseNodeBottleneck: { backgroundColor: Colors.statusInReview, borderColor: Colors.statusInReview },
-  phaseNodeText: { ...Typography.labelCaps, color: Colors.onPrimaryContainer, fontSize: 9 },
-  phaseNodeTextDone: { color: Colors.onPrimary },
-  phaseCurrentLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', paddingVertical: 8, backgroundColor: Colors.surfaceContainerLow },
-  tabBar: { flexDirection: 'row', backgroundColor: Colors.surfaceContainerLowest, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.secondary },
-  tabText: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 9 },
-  tabTextActive: { color: Colors.secondary },
-  tabContent: { flex: 1 },
-  infoCard: {
+    paddingVertical: 12,
     backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: BorderRadius.lg,
-    padding: 14,
-    borderWidth: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  backArrow: { ...Typography.bodySm, color: Colors.secondary, fontFamily: 'Inter_600SemiBold' },
+
+  // Body
+  body: { flex: 1, overflow: 'hidden' },
+  bodyDesktop: { flexDirection: 'row' },
+
+  // Left panel
+  leftPanel: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRightWidth: 1,
+    borderRightColor: Colors.outlineVariant,
+    flexShrink: 0,
+  },
+  leftScroll: { flex: 1 },
+  leftContent: { gap: 0 },
+
+  // Case header
+  caseHeader: {
+    padding: Spacing.marginPage,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+    gap: 6,
+  },
+  caseCode: { ...Typography.labelCaps, color: Colors.secondary },
+  caseTitle: {
+    ...Typography.headlineSm,
+    color: Colors.primary,
+    lineHeight: 22,
+  },
+  blockedRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  blockedChip: {
+    backgroundColor: Colors.statusBlockedBg,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  blockedChipText: { ...Typography.labelCaps, color: Colors.statusBlocked, fontSize: 9 },
+  blockedDays: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+
+  // Phase tracker
+  phaseTracker: {
+    padding: Spacing.marginPage,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  trackerTitle: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, marginBottom: 20, fontSize: 10 },
+  timeline: { gap: 0 },
+  timelineRow: { flexDirection: 'row', gap: 12, minHeight: 48, position: 'relative' },
+  phaseLine: {
+    position: 'absolute',
+    left: 10,
+    top: 28,
+    bottom: -12,
+    width: 2,
+    backgroundColor: Colors.outlineVariant,
+  },
+  phaseLineDone: { backgroundColor: Colors.secondary },
+  phaseLinePending: { backgroundColor: Colors.outlineVariant },
+  phaseDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
     borderColor: Colors.outlineVariant,
+    backgroundColor: Colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+    flexShrink: 0,
+    marginTop: 3,
+  },
+  phaseDotDone: {
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
+  },
+  phaseDotActive: {
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
+    width: 24,
+    height: 24,
+  },
+  phaseDotBlocked: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderColor: Colors.error,
+    borderWidth: 2,
+    width: 24,
+    height: 24,
+  },
+  phaseDotPending: {
+    backgroundColor: Colors.surfaceContainer,
+    borderColor: Colors.outline,
+    opacity: 0.5,
+  },
+  phaseDotCheck: { color: Colors.onSecondary, fontSize: 12, fontFamily: 'HankenGrotesk_700Bold' },
+  phaseDotNum: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  phaseDotNumActive: { color: Colors.onPrimary },
+  phaseContent: { flex: 1, paddingTop: 4, paddingBottom: 16 },
+  phaseName: {
+    ...Typography.bodySm,
+    color: Colors.onSurface,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+  },
+  phaseNameDone: { color: Colors.statusCompleted },
+  phaseNameActive: { color: Colors.secondary },
+  phaseNameBlocked: { color: Colors.error },
+  phaseNamePending: { color: Colors.onSurfaceVariant },
+  phaseContentPending: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    opacity: 0.5,
+  },
+  phaseMeta: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, marginTop: 2, fontSize: 10 },
+  phaseMetaBlocked: { color: Colors.error },
+
+  // Documents
+  docSection: { padding: Spacing.marginPage, flex: 1 },
+  docHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  infoLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  infoValue: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_600SemiBold', textAlign: 'right', flex: 1, marginLeft: 12 },
-  infoValueHighlight: { color: Colors.secondary },
-  uploadBtn: {
-    borderWidth: 1.5,
-    borderColor: Colors.secondary,
-    borderStyle: 'dashed',
-    borderRadius: BorderRadius.lg,
-    padding: 16,
-    alignItems: 'center',
-  },
-  uploadBtnText: { ...Typography.bodySm, color: Colors.secondary, fontFamily: 'Inter_600SemiBold' },
+  docTitle: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  docUploadLink: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 10 },
   docCard: {
-    backgroundColor: Colors.surfaceContainerLowest,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
     borderRadius: BorderRadius.lg,
-    padding: 14,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
-    gap: 10,
+    marginBottom: 8,
   },
-  docName: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_600SemiBold' },
-  extractedFields: { gap: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.outlineVariant },
-  extractedLabel: { ...Typography.labelCaps, color: Colors.secondary, marginBottom: 4 },
-  extractedRow: { ...Typography.bodySm, color: Colors.onSurface },
-  extractedKey: { color: Colors.onSurfaceVariant },
-  confirmBtn: { marginTop: 8, backgroundColor: Colors.secondary, borderRadius: BorderRadius.md, padding: 10, alignItems: 'center' },
-  confirmBtnText: { ...Typography.bodySm, color: Colors.onSecondary, fontFamily: 'Inter_600SemiBold' },
-  logRow: { flexDirection: 'row', gap: 12, minHeight: 48 },
-  logDot: { width: 12, height: 12, borderRadius: BorderRadius.full, backgroundColor: Colors.statusCompleted, marginTop: 3, flexShrink: 0 },
-  logDotActive: { backgroundColor: Colors.secondary, width: 14, height: 14 },
-  logLine: { position: 'absolute', left: 5, top: 16, bottom: -14, width: 2, backgroundColor: Colors.outlineVariant },
-  logContent: { flex: 1, paddingBottom: 16, gap: 2 },
-  logPhase: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_600SemiBold' },
-  logDate: { ...Typography.labelCaps, color: Colors.onSurfaceVariant },
-  logNotes: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 2 },
-  advanceCard: {
+  docCardActive: { borderColor: Colors.secondary, borderWidth: 2 },
+  docIcon: { fontSize: 20 },
+  docInfo: { flex: 1, minWidth: 0 },
+  docName: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_500Medium' },
+  docMeta: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10, marginTop: 2 },
+  docDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  docDotDone: { backgroundColor: Colors.statusCompleted },
+  docDotActive: { backgroundColor: Colors.secondary },
+  docEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', padding: 20 },
+
+  // Main panel
+  mainPanel: { flex: 1, overflow: 'hidden' },
+
+  // Tabs
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+    paddingHorizontal: 24,
+    gap: 24,
+  },
+  tab: { paddingVertical: 12 },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.secondary },
+  tabText: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  tabTextActive: { color: Colors.secondary },
+  tabBody: { flex: 1 },
+  tabBodyContent: { padding: Spacing.marginPage, gap: 16, paddingBottom: 32 },
+
+  // Summary
+  delayAlert: {
+    backgroundColor: Colors.errorContainer,
+    borderWidth: 1,
+    borderColor: Colors.error,
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  delayAlertIcon: { fontSize: 18, color: Colors.onErrorContainer, marginTop: 1 },
+  delayAlertBody: { flex: 1, gap: 4 },
+  delayAlertTitle: {
+    ...Typography.bodySm,
+    color: Colors.onErrorContainer,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  delayAlertText: { ...Typography.bodySm, color: Colors.onErrorContainer, fontSize: 12 },
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  infoField: {
+    flex: 1,
+    minWidth: 200,
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.paddingCard,
-    borderWidth: 1,
-    borderColor: Colors.secondary,
-    gap: 12,
-    marginTop: 8,
-  },
-  advanceTitle: { ...Typography.headlineSm, color: Colors.onSurface },
-  advanceSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  notesInput: {
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
-    borderRadius: BorderRadius.md,
-    padding: 12,
+    gap: 4,
+  },
+  infoFieldLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  infoFieldValue: {
     ...Typography.bodySm,
     color: Colors.onSurface,
-    minHeight: 72,
-    textAlignVertical: 'top',
+    fontFamily: 'Inter_600SemiBold',
   },
-  advanceBtn: { backgroundColor: Colors.secondary, borderRadius: BorderRadius.lg, padding: 14, alignItems: 'center' },
-  advanceBtnText: { ...Typography.bodySm, color: Colors.onSecondary, fontFamily: 'Inter_600SemiBold' },
-  aiBtn: {
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: BorderRadius.lg,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.inversePrimary,
-  },
-  aiBtnText: { ...Typography.bodySm, color: Colors.inversePrimary, fontFamily: 'Inter_600SemiBold' },
-  skeletonBox: { alignItems: 'center', padding: 32, gap: 12 },
-  skeletonText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  summaryCard: {
+  infoFieldMono: { fontFamily: 'Inter_500Medium' },
+
+  // Extracted
+  extractedCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.paddingCard,
     borderWidth: 1,
-    borderLeftWidth: 4,
     borderColor: Colors.outlineVariant,
+    overflow: 'hidden',
+  },
+  extractedHeader: {
+    backgroundColor: Colors.surfaceContainerLow,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  extractedTitle: {
+    ...Typography.labelCaps,
+    color: Colors.onSurfaceVariant,
+    fontSize: 10,
+  },
+  extractedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  extractedKey: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 10 },
+  extractedVal: {
+    ...Typography.labelCaps,
+    color: Colors.secondary,
+    fontSize: 10,
+    backgroundColor: Colors.statusOnTrackBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  extractedEmpty: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    padding: 20,
+    textAlign: 'center',
+  },
+  confirmBtn: {
+    backgroundColor: Colors.secondary,
+    padding: 14,
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginVertical: 16,
+    borderRadius: BorderRadius.lg,
+  },
+  confirmBtnText: {
+    ...Typography.bodySm,
+    color: Colors.onSecondary,
+    fontFamily: 'Inter_500Medium',
+  },
+
+  // AI
+  aiSection: { gap: 16 },
+  aiBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: 16,
+  },
+  aiBtnIcon: { fontSize: 18, color: Colors.inversePrimary },
+  aiBtnText: {
+    ...Typography.bodySm,
+    color: Colors.onPrimary,
+    fontFamily: 'Inter_500Medium',
+  },
+  aiLoading: { alignItems: 'center', padding: 32, gap: 12 },
+  aiLoadingText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
+  aiResult: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderLeftWidth: 4,
     borderLeftColor: Colors.secondary,
+    padding: 20,
     gap: 10,
     ...Elevation.activeCard,
   },
-  summaryLabel: { ...Typography.labelCaps, color: Colors.secondary },
-  summaryText: { ...Typography.bodyLg, color: Colors.onSurface, lineHeight: 26 },
-  bottleneckWarning: {
+  aiResultLabel: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 10 },
+  aiResultText: { ...Typography.bodyLg, color: Colors.onSurface, lineHeight: 26 },
+  bottleneckNote: {
     backgroundColor: Colors.statusInReviewBg,
     borderLeftWidth: 4,
     borderLeftColor: Colors.statusInReview,
     borderRadius: BorderRadius.md,
-    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.statusInReview,
+    padding: 16,
     gap: 6,
   },
-  bottleneckTitle: { ...Typography.bodySm, color: Colors.statusInReview, fontFamily: 'Inter_600SemiBold' },
-  bottleneckBody: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
+  bottleneckNoteTitle: {
+    ...Typography.bodySm,
+    color: Colors.statusInReview,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  bottleneckNoteText: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12 },
+
+  // Advance
+  advanceCard: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+    padding: 24,
+    gap: 20,
+  },
+  advanceTitle: {
+    ...Typography.headlineSm,
+    color: Colors.primary,
+  },
+  advanceSub: { ...Typography.bodySm, color: Colors.onSurfaceVariant, marginTop: 4 },
+  checklistCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: BorderRadius.lg,
+    padding: 16,
+    gap: 10,
+  },
+  checklistTitle: {
+    ...Typography.labelCaps,
+    color: Colors.onSurfaceVariant,
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  checkItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  checkOk: { fontSize: 16, color: Colors.statusCompleted },
+  checkOkText: { ...Typography.bodySm, color: Colors.onSurface },
+  checkFail: { fontSize: 16, color: Colors.error },
+  checkFailText: { ...Typography.bodySm, color: Colors.error },
+  checkNone: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
+  notesLabel: {
+    ...Typography.labelCaps,
+    color: Colors.onSurfaceVariant,
+    fontSize: 10,
+    marginBottom: 8,
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: BorderRadius.lg,
+    padding: 12,
+    ...Typography.bodySm,
+    color: Colors.onSurface,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  advanceBtn: {
+    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: 16,
+    alignItems: 'center',
+  },
+  advanceBtnDisabled: { opacity: 0.6 },
+  advanceBtnText: {
+    ...Typography.bodySm,
+    color: Colors.onSecondary,
+    fontFamily: 'Inter_500Medium',
+  },
 });
