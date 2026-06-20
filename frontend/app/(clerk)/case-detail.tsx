@@ -510,6 +510,14 @@ export default function CaseDetailScreen() {
                     </Text>
                   </View>
                 )}
+                {!canAdvance && (
+                  <View style={styles.finalStateCard}>
+                    <Text style={styles.finalStateTitle}>Case Complete</Text>
+                    <Text style={styles.finalStateText}>
+                      This case has reached Phase 7 (Property Registration), the final phase of the EKB process. No further phase advancement is possible.
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
           </ScrollView>
@@ -1034,6 +1042,25 @@ const styles = StyleSheet.create({
     ...Typography.bodySm,
     color: Colors.statusCompleted,
     fontFamily: "Inter_600SemiBold",
+  },
+  finalStateText: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  finalStateCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: BorderRadius.lg,
+    padding: 20,
+    gap: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.statusCompleted,
+  },
+  finalStateTitle: {
+    ...Typography.bodySm,
+    color: Colors.statusCompleted,
+    fontFamily: 'Inter_600SemiBold',
   },
   finalStateText: {
     ...Typography.bodySm,
