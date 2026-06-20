@@ -19,7 +19,6 @@ import {
   BorderRadius,
   PHASE_LABELS,
   PHASE_DESCRIPTIONS,
-  BOTTLENECK_PHASES,
 } from "../constants/design";
 import { useAuthStore } from "../hooks/useAuthStore";
 
@@ -110,6 +109,11 @@ export default function DashboardScreen() {
   });
 
   const blocked = items.filter((c) => c.is_blocked);
+  // Phases that currently have at least one blocked case — mirrors cases.tsx
+  // and kanban.tsx so dashboard coloring matches reality, not just "usually slow".
+  const blockedPhases = new Set(
+    items.filter((c) => c.is_blocked).map((c) => c.current_phase),
+  );
   const blockedCount = statsLoading
     ? blocked.length
     : (stats?.high_latency_count ?? blocked.length);
@@ -193,7 +197,7 @@ export default function DashboardScreen() {
               [1, 2, 3, 4, 5, 6, 7].map((phase) => {
                 const count = casesByPhase[phase] || 0;
                 if (count === 0) return null;
-                const isBottleneck = BOTTLENECK_PHASES.includes(phase);
+                const isBlockedPhase = blockedPhases.has(phase);
                 const isCompleted = phase === 7;
                 return (
                   <View
@@ -201,7 +205,7 @@ export default function DashboardScreen() {
                     style={[
                       styles.ribbonSeg,
                       { flexGrow: count, flexBasis: 0 },
-                      isBottleneck && styles.ribbonSegWarn,
+                      isBlockedPhase && styles.ribbonSegWarn,
                       isCompleted && styles.ribbonSegDone,
                     ]}
                   />
@@ -211,7 +215,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.ribbonLegendRow}>
             <LegendDot color={Colors.secondary} label="On track" />
-            <LegendDot color={Colors.statusInReview} label="Bottleneck phase" />
+            <LegendDot color={Colors.statusInReview} label="Has blocked cases" />
             <LegendDot color={Colors.statusCompleted} label="Registered" />
           </View>
         </View>
@@ -287,7 +291,7 @@ export default function DashboardScreen() {
           <View style={styles.phaseList}>
             {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
               const count = casesByPhase[phase] || 0;
-              const isBottleneck = BOTTLENECK_PHASES.includes(phase);
+              const isBlockedPhase = blockedPhases.has(phase);
               const isCompleted = phase === 7;
 
               return (
@@ -302,14 +306,14 @@ export default function DashboardScreen() {
                   }
                   style={[
                     styles.phaseRow,
-                    isBottleneck && styles.phaseRowWarn,
+                    isBlockedPhase && styles.phaseRowWarn,
                     isCompleted && styles.phaseRowDone,
                   ]}
                 >
                   <View
                     style={[
                       styles.fBadge,
-                      isBottleneck && styles.fBadgeWarn,
+                      isBlockedPhase && styles.fBadgeWarn,
                       isCompleted && styles.fBadgeDone,
                     ]}
                   >
@@ -321,10 +325,10 @@ export default function DashboardScreen() {
                       <Text style={styles.phaseName}>
                         {PHASE_LABELS[phase]}
                       </Text>
-                      {isBottleneck && (
+                      {isBlockedPhase && (
                         <View style={styles.bottleneckChip}>
                           <Text style={styles.bottleneckChipText}>
-                            BOTTLENECK {phase === 3 ? "2–4 wks" : "4–8 wks"}
+                            NEEDS ATTENTION
                           </Text>
                         </View>
                       )}
@@ -338,7 +342,7 @@ export default function DashboardScreen() {
                     <Text
                       style={[
                         styles.phaseCount,
-                        isBottleneck && styles.phaseCountWarn,
+                        isBlockedPhase && styles.phaseCountWarn,
                         isCompleted && styles.phaseCountDone,
                       ]}
                     >

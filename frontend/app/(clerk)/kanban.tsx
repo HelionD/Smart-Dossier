@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  useWindowDimensions,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -20,8 +21,8 @@ import {
   getCaseStatusVisual,
 } from "../constants/design";
 import type { Case } from "../types";
-
 export default function KanbanScreen() {
+  const { height: windowHeight } = useWindowDimensions();
   const {
     data: items = [],
     isLoading,
@@ -34,6 +35,10 @@ export default function KanbanScreen() {
   });
 
   const blockedCount = items.filter((c) => c.is_blocked).length;
+  // Fill available vertical space below header (~80px header + padding).
+  // useWindowDimensions may return 0 on first render (web) — guard with fallback.
+  const columnHeight = windowHeight > 100 ? windowHeight - 100 : 600;
+
 
   return (
     <View style={styles.root}>
@@ -84,7 +89,7 @@ export default function KanbanScreen() {
               phaseCases.every((c) => c.status === "completed");
 
             return (
-              <View key={phase} style={styles.column}>
+              <View key={phase} style={[styles.column, { maxHeight: columnHeight }]}>
                 {/* Column header */}
                 <View style={styles.columnHeader}>
                   <Text
@@ -269,8 +274,6 @@ const styles = StyleSheet.create({
   // FIX: column must have a fixed height (not flex:1) so vertical scroll works
   column: {
     width: 280,
-    // maxHeight constrains the column so cards overflow into a vertical scroll
-    maxHeight: 600,
     flexShrink: 0,
   },
   columnHeader: {

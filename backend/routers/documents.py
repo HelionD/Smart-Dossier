@@ -93,6 +93,18 @@ async def upload_document(
         except Exception as e:
             logger.warning("Document checklist failed: %s", e)
 
+    # ── Merge extraction results into checklist ────────────────────────────
+    # GLiNER2 is a deterministic NER model — if it extracted a field, the
+    # document definitely contains it. Ollama (1.5B model) sometimes misses
+    # fields when Docling garbles line breaks, so we override here.
+    _EXTRACTION_TO_CHECKLIST: dict[str, str] = {
+        "owner_name": "has_owner_name",
+        "property_id": "has_property_id",
+    }
+    if checklist and extracted:
+        for extr_key, check_key in _EXTRACTION_TO_CHECKLIST.items():
+            if extracted.get(extr_key):
+                checklist[check_key] = True
     # Persist document record
     doc = Document(
         case_id=case_id,

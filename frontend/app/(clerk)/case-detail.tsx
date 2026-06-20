@@ -549,22 +549,9 @@ export default function CaseDetailScreen() {
                         styles.advanceBtn,
                         advanceMutation.isPending && styles.advanceBtnDisabled,
                       ]}
-                      onPress={() => {
-                        Alert.alert(
-                          "Confirm Phase Advance",
-                          `Advance to Phase ${caseItem.current_phase + 1}?`,
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Advance",
-                              onPress: () =>
-                                advanceMutation.mutate(
-                                  caseItem.current_phase + 1
-                                ),
-                            },
-                          ]
-                        );
-                      }}
+                      onPress={() =>
+                        advanceMutation.mutate(caseItem.current_phase + 1)
+                      }
                       disabled={advanceMutation.isPending}
                     >
                       {advanceMutation.isPending ? (
