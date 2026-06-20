@@ -491,96 +491,24 @@ export default function CaseDetailScreen() {
                     {PHASE_DESCRIPTIONS[caseItem.current_phase + 1]}
                   </Text>
                 </View>
-                <View style={styles.checklistCard}>
-                  <Text style={styles.checklistTitle}>
-                    DOCUMENT & PHASE CHECKLIST
-                  </Text>
-                  {caseItem.phase_checklist ? (
-                    <>
-                      {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
-                        const key = String(phase);
-                        const passed = caseItem.phase_checklist![key];
-                        return (
-                          <View key={key} style={styles.checkItem}>
-                            <Text
-                              style={passed ? styles.checkOk : styles.checkFail}
-                            >
-                              {passed ? "\u2713" : "\u2717"}
-                            </Text>
-                            <Text
-                              style={
-                                passed
-                                  ? styles.checkOkText
-                                  : styles.checkFailText
-                              }
-                            >
-                              Phase {phase}: {PHASE_LABELS[phase]}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </>
-                  ) : (
-                    <Text style={styles.checkNone}>
-                      Upload documents to generate a phase checklist. Ollama
-                      must be running.
+                {canAdvance ? (
+                  <View>
+                    <Text style={styles.advanceTitle}>
+                      Advance to Phase {caseItem.current_phase + 1}
                     </Text>
-                  )}
-                </View>
-                {canAdvance && (
-                  <>
-                    <View>
-                      <Text style={styles.notesLabel}>
-                        NOTES FOR THIS TRANSITION
-                      </Text>
-                      <TextInput
-                        style={styles.notesInput}
-                        value={advanceNotes}
-                        onChangeText={setAdvanceNotes}
-                        placeholder="Optional: Add transition notes..."
-                        placeholderTextColor={Colors.outline}
-                        multiline
-                        numberOfLines={3}
-                        textAlignVertical="top"
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.advanceBtn,
-                        advanceMutation.isPending && styles.advanceBtnDisabled,
-                      ]}
-                      onPress={() => {
-                        Alert.alert(
-                          "Confirm phase change",
-                          `Move from phase ${caseItem.current_phase} to phase ${caseItem.current_phase + 1}?`,
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Confirm",
-                              onPress: () =>
-                                advanceMutation.mutate(
-                                  caseItem.current_phase + 1,
-                                ),
-                            },
-                          ],
-                        );
-                      }}
-                      disabled={advanceMutation.isPending}
-                      activeOpacity={0.85}
-                    >
-                      {advanceMutation.isPending ? (
-                        <ActivityIndicator
-                          color={Colors.onSecondary}
-                          size="small"
-                        />
-                      ) : (
-                        <Text style={styles.advanceBtnText}>
-                          Confirm advance to Phase {caseItem.current_phase + 1}{" "}
-                          →
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </>
+                    <Text style={styles.advanceSub}>
+                      {PHASE_DESCRIPTIONS[caseItem.current_phase + 1]}
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={styles.advanceTitle}>
+                      Phase 7 — Final Phase
+                    </Text>
+                    <Text style={styles.advanceSub}>
+                      {PHASE_DESCRIPTIONS[7]}
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
@@ -1093,5 +1021,24 @@ const styles = StyleSheet.create({
     ...Typography.bodySm,
     color: Colors.onSecondary,
     fontFamily: "Inter_500Medium",
+  },
+  finalStateCard: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: BorderRadius.lg,
+    padding: 20,
+    gap: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.statusCompleted,
+  },
+  finalStateTitle: {
+    ...Typography.bodySm,
+    color: Colors.statusCompleted,
+    fontFamily: "Inter_600SemiBold",
+  },
+  finalStateText: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+    lineHeight: 18,
   },
 });
