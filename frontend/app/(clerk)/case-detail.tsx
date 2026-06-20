@@ -26,18 +26,15 @@ import {
 } from "../constants/design";
 import * as DocumentPicker from "expo-document-picker";
 
-<<<<<<< HEAD
 type Tab = "summary" | "extracted" | "ai" | "advance";
-=======
-type Tab = 'summary' | 'extracted' | 'ai' | 'advance';
+
 const DOC_CHECK_LABELS: Record<string, string> = {
-  has_owner_name: 'Owner name',
-  has_property_id: 'Property ID',
-  has_signature: 'Signature',
-  has_official_stamp: 'Official stamp',
-  is_dated: 'Dated',
+  has_owner_name: "Owner name",
+  has_property_id: "Property ID",
+  has_signature: "Signature",
+  has_official_stamp: "Official stamp",
+  is_dated: "Dated",
 };
->>>>>>> cf4369d97b263c3016b56fa97229d71ac6a72924
 
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -233,23 +230,19 @@ export default function CaseDetailScreen() {
                     });
                     if (!result.canceled && result.assets[0]) {
                       const file = result.assets[0];
-<<<<<<< HEAD
                       await documents.upload(id, {
                         uri: file.uri,
                         name: file.name,
                         type: file.mimeType ?? "application/pdf",
                       });
                       qc.invalidateQueries({ queryKey: ["docs", id] });
-=======
-                      await documents.upload(id, { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' });
-                      qc.invalidateQueries({ queryKey: ['docs', id] });
-                      qc.invalidateQueries({ queryKey: ['case', id] });
->>>>>>> cf4369d97b263c3016b56fa97229d71ac6a72924
+                      qc.invalidateQueries({ queryKey: ["case", id] });
                     }
                   }}
                 >
                   <Text style={styles.docUploadLink}>+ Upload</Text>
                 </TouchableOpacity>
+              </View>
               {docs.map((doc) => (
                 <View
                   key={doc.id}
@@ -269,8 +262,14 @@ export default function CaseDetailScreen() {
                     {doc.checklist && (
                       <View style={styles.docChecklist}>
                         {Object.entries(doc.checklist).map(([key, val]) => (
-                          <Text key={key} style={val ? styles.docCheckOk : styles.docCheckFail}>
-                            {val ? '\u2713' : '\u2717'} {DOC_CHECK_LABELS[key] ?? key}
+                          <Text
+                            key={key}
+                            style={
+                              val ? styles.docCheckOk : styles.docCheckFail
+                            }
+                          >
+                            {val ? "\u2713" : "\u2717"}{" "}
+                            {DOC_CHECK_LABELS[key] ?? key}
                           </Text>
                         ))}
                       </View>
@@ -493,38 +492,9 @@ export default function CaseDetailScreen() {
                   </Text>
                 </View>
                 <View style={styles.checklistCard}>
-<<<<<<< HEAD
                   <Text style={styles.checklistTitle}>
-                    CURRENT CHECKLIST BEFORE ADVANCING
+                    DOCUMENT & PHASE CHECKLIST
                   </Text>
-                  {canAdvance ? (
-                    <>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkOk}>✓</Text>
-                        <Text style={styles.checkOkText}>
-                          Documents uploaded and verified
-                        </Text>
-                      </View>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkFail}>✕</Text>
-                        <Text style={styles.checkFailText}>
-                          {caseItem.current_phase === 3
-                            ? "ASHK verification response pending"
-                            : "Phase requirements not fully met"}
-                        </Text>
-                      </View>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkFail}>✕</Text>
-                        <Text style={styles.checkFailText}>
-                          Conflict check not cleared
-                        </Text>
-                      </View>
-                    </>
-                  ) : (
-                    <Text style={styles.checkNone}>
-                      Case is in final phase — no further advancement needed.
-=======
-                  <Text style={styles.checklistTitle}>DOCUMENT & PHASE CHECKLIST</Text>
                   {caseItem.phase_checklist ? (
                     <>
                       {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
@@ -532,10 +502,18 @@ export default function CaseDetailScreen() {
                         const passed = caseItem.phase_checklist![key];
                         return (
                           <View key={key} style={styles.checkItem}>
-                            <Text style={passed ? styles.checkOk : styles.checkFail}>
-                              {passed ? '\u2713' : '\u2717'}
+                            <Text
+                              style={passed ? styles.checkOk : styles.checkFail}
+                            >
+                              {passed ? "\u2713" : "\u2717"}
                             </Text>
-                            <Text style={passed ? styles.checkOkText : styles.checkFailText}>
+                            <Text
+                              style={
+                                passed
+                                  ? styles.checkOkText
+                                  : styles.checkFailText
+                              }
+                            >
                               Phase {phase}: {PHASE_LABELS[phase]}
                             </Text>
                           </View>
@@ -544,8 +522,8 @@ export default function CaseDetailScreen() {
                     </>
                   ) : (
                     <Text style={styles.checkNone}>
-                      Upload documents to generate a phase checklist. Ollama must be running.
->>>>>>> cf4369d97b263c3016b56fa97229d71ac6a72924
+                      Upload documents to generate a phase checklist. Ollama
+                      must be running.
                     </Text>
                   )}
                 </View>
@@ -645,7 +623,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: Colors.background,
   },
-
   backBtn: {
     paddingHorizontal: Spacing.marginPage,
     paddingVertical: 12,
@@ -658,12 +635,8 @@ const styles = StyleSheet.create({
     color: Colors.secondary,
     fontFamily: "Inter_600SemiBold",
   },
-
-  // Body
   body: { flex: 1, overflow: "hidden" },
   bodyDesktop: { flexDirection: "row" },
-
-  // Left panel
   leftPanel: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRightWidth: 1,
@@ -678,8 +651,6 @@ const styles = StyleSheet.create({
   },
   leftScroll: { flex: 1 },
   leftContent: { gap: 0 },
-
-  // Case header
   caseHeader: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineVariant,
@@ -714,8 +685,6 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     fontSize: 10,
   },
-
-  // Phase tracker
   phaseTracker: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineVariant,
@@ -776,8 +745,6 @@ const styles = StyleSheet.create({
     marginTop: -1,
     marginLeft: -1,
   },
-  // Pending dots use an explicit lighter color set rather than opacity, so the
-  // border and number stay legible instead of washing out to near-invisible.
   phaseDotPending: {
     backgroundColor: Colors.surfaceContainerLow,
     borderColor: Colors.outlineVariant,
@@ -818,8 +785,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   phaseMetaBlocked: { color: Colors.error },
-
-  // Documents
   docSection: { flex: 1 },
   docHeader: {
     flexDirection: "row",
@@ -864,24 +829,20 @@ const styles = StyleSheet.create({
   docDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   docDotDone: { backgroundColor: Colors.statusCompleted },
   docDotActive: { backgroundColor: Colors.secondary },
-<<<<<<< HEAD
   docEmpty: {
     ...Typography.bodySm,
     color: Colors.onSurfaceVariant,
     textAlign: "center",
     padding: 20,
   },
-=======
-  docEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', padding: 20 },
   docChecklist: { marginTop: 6, gap: 2 },
-  docCheckOk: { ...Typography.labelCaps, color: Colors.statusCompleted, fontSize: 9 },
+  docCheckOk: {
+    ...Typography.labelCaps,
+    color: Colors.statusCompleted,
+    fontSize: 9,
+  },
   docCheckFail: { ...Typography.labelCaps, color: Colors.error, fontSize: 9 },
->>>>>>> cf4369d97b263c3016b56fa97229d71ac6a72924
-
-  // Main panel
   mainPanel: { flex: 1, overflow: "hidden" },
-
-  // Tabs
   tabBar: {
     flexGrow: 0,
     backgroundColor: Colors.surfaceContainerLowest,
@@ -899,8 +860,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: Colors.secondary },
   tabBody: { flex: 1 },
   tabBodyContent: { gap: 16, paddingBottom: 32 },
-
-  // Summary
   delayAlert: {
     backgroundColor: Colors.errorContainer,
     borderWidth: 1,
@@ -926,11 +885,7 @@ const styles = StyleSheet.create({
     color: Colors.onErrorContainer,
     fontSize: 12,
   },
-  infoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
+  infoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   infoField: {
     flexGrow: 1,
     flexBasis: "100%",
@@ -953,8 +908,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   infoFieldMono: { fontFamily: "Inter_500Medium" },
-
-  // Extracted
   extractedCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,
@@ -1020,8 +973,6 @@ const styles = StyleSheet.create({
     color: Colors.onSecondary,
     fontFamily: "Inter_500Medium",
   },
-
-  // AI
   aiSection: { gap: 16 },
   aiBtn: {
     flexDirection: "row",
@@ -1082,8 +1033,6 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     fontSize: 12,
   },
-
-  // Advance
   advanceCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,
@@ -1092,10 +1041,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 20,
   },
-  advanceTitle: {
-    ...Typography.headlineSm,
-    color: Colors.primary,
-  },
+  advanceTitle: { ...Typography.headlineSm, color: Colors.primary },
   advanceSub: {
     ...Typography.bodySm,
     color: Colors.onSurfaceVariant,
