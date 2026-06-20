@@ -21,7 +21,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   }
 }
 
-rootProject.name = 'SmartDossier'
+rootProject.name = 'Smart Dossier'
 
 dependencyResolutionManagement {
   versionCatalogs {
