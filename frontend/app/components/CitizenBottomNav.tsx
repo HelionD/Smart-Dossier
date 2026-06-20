@@ -4,8 +4,8 @@ import { router, usePathname } from 'expo-router';
 import { Colors, Typography } from '../constants/design';
 
 const TABS = [
-  { key: 'track', label: 'Track Case', icon: '▤', href: '/(citizen)/track' as const },
-  { key: 'profile', label: 'Profile', icon: '◉', href: '/(citizen)/profile' as const },
+  { key: 'track', label: 'Track Case', icon: '▤', href: '/login' as const },
+  { key: 'profile', label: 'Profile', icon: '◉', href: '/login' as const },
 ];
 
 export function CitizenBottomNav() {

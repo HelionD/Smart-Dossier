@@ -23,6 +23,7 @@ export interface Case {
   owner_name: string | null;
   property_id: string | null;
   zone: string | null;
+  income_bracket: string | null;
   family_size: number | null;
   current_phase: number;
   status: CaseStatus;
@@ -84,6 +85,7 @@ export interface CreateCaseRequest {
   owner_name?: string;
   property_id?: string;
   zone?: string;
+  income_bracket?: string;
   family_size?: number;
   citizen_id?: string;
 }

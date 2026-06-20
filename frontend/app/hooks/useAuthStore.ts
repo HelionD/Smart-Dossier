@@ -18,7 +18,7 @@ interface AuthState {
 
 const navigate = (role: string) => {
   if (role === "clerk") router.replace("/(clerk)/dashboard");
-  else router.replace("/(citizen)/track");
+  else router.replace("/login"); // citizen UI not yet built
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
