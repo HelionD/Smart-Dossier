@@ -56,7 +56,7 @@ app = FastAPI(
     description=(
         "EKB property privatization case management. "
         "AI stack: Docling (document parsing) + GLiNER2 (field extraction) + "
-        "Qwen2.5:7b via Ollama (summaries & letters). All local, no API keys."
+        "Qwen2.5:1.5b via Ollama (summaries & letters). All local, no API keys."
     ),
     lifespan=lifespan,
 )

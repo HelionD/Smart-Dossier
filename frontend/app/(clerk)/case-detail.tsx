@@ -13,6 +13,13 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 
 type Tab = 'summary' | 'extracted' | 'ai' | 'advance';
+const DOC_CHECK_LABELS: Record<string, string> = {
+  has_owner_name: 'Owner name',
+  has_property_id: 'Property ID',
+  has_signature: 'Signature',
+  has_official_stamp: 'Official stamp',
+  is_dated: 'Dated',
+};
 
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,12 +193,12 @@ export default function CaseDetailScreen() {
                       const file = result.assets[0];
                       await documents.upload(id, { uri: file.uri, name: file.name, type: file.mimeType ?? 'application/pdf' });
                       qc.invalidateQueries({ queryKey: ['docs', id] });
+                      qc.invalidateQueries({ queryKey: ['case', id] });
                     }
                   }}
                 >
                   <Text style={styles.docUploadLink}>+ Upload</Text>
                 </TouchableOpacity>
-              </View>
               {docs.map((doc) => (
                 <View key={doc.id} style={[styles.docCard, doc.confirmed && styles.docCardActive]}>
                   <Text style={styles.docIcon}>{'\u25A1'}</Text>
@@ -200,6 +207,15 @@ export default function CaseDetailScreen() {
                     <Text style={styles.docMeta}>
                       {doc.confirmed ? 'Verified' : 'In Review'}
                     </Text>
+                    {doc.checklist && (
+                      <View style={styles.docChecklist}>
+                        {Object.entries(doc.checklist).map(([key, val]) => (
+                          <Text key={key} style={val ? styles.docCheckOk : styles.docCheckFail}>
+                            {val ? '\u2713' : '\u2717'} {DOC_CHECK_LABELS[key] ?? key}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
                   <View style={[styles.docDot, doc.confirmed ? styles.docDotDone : styles.docDotActive]} />
                 </View>
@@ -355,28 +371,28 @@ export default function CaseDetailScreen() {
                 </View>
 
                 <View style={styles.checklistCard}>
-                  <Text style={styles.checklistTitle}>CURRENT CHECKLIST BEFORE ADVANCING</Text>
-                  {canAdvance ? (
+                  <Text style={styles.checklistTitle}>DOCUMENT & PHASE CHECKLIST</Text>
+                  {caseItem.phase_checklist ? (
                     <>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkOk}>✓</Text>
-                        <Text style={styles.checkOkText}>Documents uploaded and verified</Text>
-                      </View>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkFail}>✕</Text>
-                        <Text style={styles.checkFailText}>
-                          {caseItem.current_phase === 3
-                            ? 'ASHK verification response pending'
-                            : 'Phase requirements not fully met'}
-                        </Text>
-                      </View>
-                      <View style={styles.checkItem}>
-                        <Text style={styles.checkFail}>✕</Text>
-                        <Text style={styles.checkFailText}>Conflict check not cleared</Text>
-                      </View>
+                      {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
+                        const key = String(phase);
+                        const passed = caseItem.phase_checklist![key];
+                        return (
+                          <View key={key} style={styles.checkItem}>
+                            <Text style={passed ? styles.checkOk : styles.checkFail}>
+                              {passed ? '\u2713' : '\u2717'}
+                            </Text>
+                            <Text style={passed ? styles.checkOkText : styles.checkFailText}>
+                              Phase {phase}: {PHASE_LABELS[phase]}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </>
                   ) : (
-                    <Text style={styles.checkNone}>Case is in final phase — no further advancement needed.</Text>
+                    <Text style={styles.checkNone}>
+                      Upload documents to generate a phase checklist. Ollama must be running.
+                    </Text>
                   )}
                 </View>
 
@@ -593,6 +609,9 @@ const styles = StyleSheet.create({
   docDotDone: { backgroundColor: Colors.statusCompleted },
   docDotActive: { backgroundColor: Colors.secondary },
   docEmpty: { ...Typography.bodySm, color: Colors.onSurfaceVariant, textAlign: 'center', padding: 20 },
+  docChecklist: { marginTop: 6, gap: 2 },
+  docCheckOk: { ...Typography.labelCaps, color: Colors.statusCompleted, fontSize: 9 },
+  docCheckFail: { ...Typography.labelCaps, color: Colors.error, fontSize: 9 },
 
   // Main panel
   mainPanel: { flex: 1, overflow: 'hidden' },
