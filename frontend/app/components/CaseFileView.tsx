@@ -63,7 +63,12 @@ const stampStyles = StyleSheet.create({
 function Thread({ status, isLast }: { status: PhaseStatus; isLast: boolean }) {
   if (isLast) return null;
   return (
-    <View style={[threadStyles.base, status === "done" ? threadStyles.solid : threadStyles.dashed]} />
+    <View
+      style={[
+        threadStyles.base,
+        status === "done" ? threadStyles.solid : threadStyles.dashed,
+      ]}
+    />
   );
 }
 
@@ -140,7 +145,9 @@ function PhaseRow({
           style={phaseStyles.head}
         >
           <View style={phaseStyles.headLeft}>
-            <Text style={[phaseStyles.title, isPending && phaseStyles.titlePending]}>
+            <Text
+              style={[phaseStyles.title, isPending && phaseStyles.titlePending]}
+            >
               {phase.title}
             </Text>
             <Text style={phaseStyles.date}>{phase.date}</Text>
@@ -195,7 +202,7 @@ const phaseStyles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: "HankenGrotesk_700Bold",
+    fontFamily: "SourceSerif4_600SemiBold",
     fontSize: 17,
     color: Paper.ink,
   },
@@ -279,7 +286,9 @@ function ProgressBar({
   return (
     <View style={progressStyles.root}>
       <View style={progressStyles.track}>
-        <View style={[progressStyles.fill, { width: `${pct}%` as `${number}%` }]} />
+        <View
+          style={[progressStyles.fill, { width: `${pct}%` as `${number}%` }]}
+        />
       </View>
       <View style={progressStyles.caption}>
         <Text style={progressStyles.captionText}>
@@ -438,7 +447,7 @@ const headerStyles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontFamily: "HankenGrotesk_700Bold",
+    fontFamily: "SourceSerif4_600SemiBold",
     fontSize: 26,
     lineHeight: 32,
     color: Paper.ink,
@@ -575,11 +584,7 @@ const nextStyles = StyleSheet.create({
 });
 
 // ── Main component ───────────────────────────────────────────────────────────
-export default function CaseFileView({
-  caseData,
-}: {
-  caseData: CaseFileData;
-}) {
+export default function CaseFileView({ caseData }: { caseData: CaseFileData }) {
   return (
     <ScrollView
       style={rootStyles.scroll}

@@ -20,6 +20,7 @@ import {
   PHASE_LABELS,
   PHASE_DESCRIPTIONS,
 } from "../constants/design";
+import { FolderHeader, StatusPill } from "../components/Dossier";
 import { useAuthStore } from "../hooks/useAuthStore";
 
 // ── Dynamic subtitle ────────────────────────────────────────────────────────
@@ -160,23 +161,24 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.topRow}>
-          <View style={styles.topLeft}>
-            <Text style={styles.kicker}>EKB PRIVATIZATION · 7 PHASES</Text>
-            <Text style={styles.pageTitle}>Registry Overview</Text>
-            {/* ── Dynamic subtitle replaces static string ── */}
-            <Text style={styles.pageSub}>{dynamicSubtitle}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.kanbanBtn}
-            onPress={() => router.push("./kanban")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.kanbanBtnIcon}>▦</Text>
-            <Text style={styles.kanbanBtnText}>Open Kanban</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Header — same folder-tab document framing as every other screen */}
+        <FolderHeader
+          inset
+          eyebrow="EKB Privatization"
+          context="7-Phase Workflow"
+          title="Registry Overview"
+          subtitle={dynamicSubtitle}
+          right={
+            <TouchableOpacity
+              style={styles.kanbanBtn}
+              onPress={() => router.push("./kanban")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.kanbanBtnIcon}>▦</Text>
+              <Text style={styles.kanbanBtnText}>Open Kanban</Text>
+            </TouchableOpacity>
+          }
+        />
 
         {/* Pipeline ribbon */}
         <View style={styles.ribbonCard}>
@@ -215,7 +217,10 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.ribbonLegendRow}>
             <LegendDot color={Colors.secondary} label="On track" />
-            <LegendDot color={Colors.statusInReview} label="Has blocked cases" />
+            <LegendDot
+              color={Colors.statusInReview}
+              label="Has blocked cases"
+            />
             <LegendDot color={Colors.statusCompleted} label="Registered" />
           </View>
         </View>
@@ -326,11 +331,12 @@ export default function DashboardScreen() {
                         {PHASE_LABELS[phase]}
                       </Text>
                       {isBlockedPhase && (
-                        <View style={styles.bottleneckChip}>
-                          <Text style={styles.bottleneckChipText}>
-                            NEEDS ATTENTION
-                          </Text>
-                        </View>
+                        <StatusPill
+                          small
+                          label="Needs attention"
+                          fg={Colors.statusInReview}
+                          bg={Colors.statusInReviewBg}
+                        />
                       )}
                     </View>
                     <Text style={styles.phaseDesc} numberOfLines={1}>
@@ -406,26 +412,6 @@ const styles = StyleSheet.create({
     alignSelf: "center" as const,
   },
 
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  topLeft: { gap: 4 },
-  kicker: {
-    ...Typography.labelCaps,
-    color: Colors.secondary,
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-  pageTitle: { ...Typography.displayLg, color: Colors.primary, fontSize: 30 },
-  pageSub: {
-    ...Typography.bodySm,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-  },
   kanbanBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -645,17 +631,6 @@ const styles = StyleSheet.create({
     ...Typography.bodySm,
     color: Colors.onSurface,
     fontFamily: "Inter_500Medium",
-  },
-  bottleneckChip: {
-    backgroundColor: Colors.statusInReviewBg,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  bottleneckChipText: {
-    ...Typography.labelCaps,
-    color: Colors.statusInReview,
-    fontSize: 8,
   },
   phaseDesc: {
     ...Typography.bodySm,

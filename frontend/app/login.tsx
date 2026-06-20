@@ -153,24 +153,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Demo accounts hint — styled as a stamped annex note rather than a floating box */}
-          <View style={styles.demoBox}>
-            <View style={styles.demoHeaderRow}>
-              <View style={styles.demoStamp}>
-                <Text style={styles.demoStampText}>DEMO</Text>
-              </View>
-              <Text style={styles.demoTitle}>Test accounts</Text>
-            </View>
-            <View style={styles.demoRow}>
-              <Text style={styles.demoRole}>Clerk</Text>
-              <Text style={styles.demoText}>clerk@ekb.gov · test1234</Text>
-            </View>
-            <View style={styles.demoRow}>
-              <Text style={styles.demoRole}>Citizen</Text>
-              <Text style={styles.demoText}>alice@mail.com · test1234</Text>
-            </View>
-          </View>
-
           <Text style={styles.version}>EKB · Privatization v1.0</Text>
         </View>
       </ScrollView>

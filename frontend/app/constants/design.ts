@@ -35,24 +35,32 @@ export const Colors = {
   statusOnTrackBg: "#DCE9E2",
 };
 
+// ── Typography ──────────────────────────────────────────────────────────────
+// Three-voice type system, modeled on the citizen "Case File" document:
+//   - Source Serif 4 for document/section titles (the dossier's voice)
+//   - JetBrains Mono, uppercase + tracked, for labels/eyebrows/metadata
+//   - Inter for body copy and UI chrome
+// Big numeric displays (stat counters, badges) intentionally stay on Hanken
+// Grotesk inline in their own screens — see dashboard.tsx / kanban.tsx — to
+// keep a clear distinction between "document text" and "dashboard data".
 export const Typography = {
   displayLg: {
-    fontFamily: "HankenGrotesk_700Bold",
+    fontFamily: "SourceSerif4_700Bold",
     fontSize: 36,
   },
 
   headlineMd: {
-    fontFamily: "HankenGrotesk_600SemiBold",
+    fontFamily: "SourceSerif4_600SemiBold",
     fontSize: 24,
   },
 
   headlineSm: {
-    fontFamily: "HankenGrotesk_600SemiBold",
+    fontFamily: "SourceSerif4_600SemiBold",
     fontSize: 18,
   },
 
   headlineMdMobile: {
-    fontFamily: "HankenGrotesk_600SemiBold",
+    fontFamily: "SourceSerif4_600SemiBold",
     fontSize: 20,
   },
 

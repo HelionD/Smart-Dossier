@@ -21,6 +21,7 @@ import {
   PHASE_LABELS,
   getCaseStatusVisual,
 } from "../constants/design";
+import { FolderHeader, StatusPill } from "../components/Dossier";
 import type { Case } from "../types";
 
 export default function CasesScreen() {
@@ -56,10 +57,12 @@ export default function CasesScreen() {
   );
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerLabel}>All Cases</Text>
-        <Text style={styles.headerCount}>{filtered.length} cases</Text>
-      </View>
+      <FolderHeader
+        eyebrow="Case Registry"
+        context="EKB Privatization"
+        title="All Cases"
+        subtitle={`${filtered.length} case${filtered.length === 1 ? "" : "s"} in the queue`}
+      />
 
       {/* Search */}
       <View style={styles.searchWrap}>
@@ -100,32 +103,33 @@ export default function CasesScreen() {
         {[1, 2, 3, 4, 5, 6, 7].map((p) => {
           const isBlockedPhase = blockedPhases.has(p);
           return (
-          <TouchableOpacity
-            key={p}
-            style={[
-              styles.filterChip,
-              selectedPhase === p && styles.filterChipActive,
-              isBlockedPhase && styles.filterChipBlocked,
-              isBlockedPhase &&
-                selectedPhase === p &&
-                styles.filterChipBlockedActive,
-            ]}
-            onPress={() => setSelectedPhase(selectedPhase === p ? null : p)}
-          >
-            <Text
+            <TouchableOpacity
+              key={p}
               style={[
-                styles.filterChipText,
-                selectedPhase === p && styles.filterChipTextActive,
-                isBlockedPhase && styles.filterChipTextBlocked,
+                styles.filterChip,
+                selectedPhase === p && styles.filterChipActive,
+                isBlockedPhase && styles.filterChipBlocked,
                 isBlockedPhase &&
                   selectedPhase === p &&
-                  styles.filterChipTextBlockedActive,
+                  styles.filterChipBlockedActive,
               ]}
+              onPress={() => setSelectedPhase(selectedPhase === p ? null : p)}
             >
-              F{p}
-            </Text>
-          </TouchableOpacity>
-        )})}
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedPhase === p && styles.filterChipTextActive,
+                  isBlockedPhase && styles.filterChipTextBlocked,
+                  isBlockedPhase &&
+                    selectedPhase === p &&
+                    styles.filterChipTextBlockedActive,
+                ]}
+              >
+                F{p}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* List */}
@@ -196,9 +200,12 @@ function CaseItem({ caseItem }: { caseItem: Case }) {
         </Text>
         <View style={styles.itemRight}>
           {caseItem.is_blocked && (
-            <View style={styles.blockedChip}>
-              <Text style={styles.blockedChipText}>BLOCKED</Text>
-            </View>
+            <StatusPill
+              small
+              label="Blocked"
+              fg={statusVisual.fg}
+              bg={statusVisual.bg}
+            />
           )}
           <Text
             style={[
@@ -216,38 +223,31 @@ function CaseItem({ caseItem }: { caseItem: Case }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    backgroundColor: Colors.primary,
-    paddingTop: Platform.select({ ios: 60, default: 48 }),
-    paddingBottom: 16,
-    paddingHorizontal: Spacing.marginPage,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  headerLabel: { ...Typography.headlineMdMobile, color: Colors.onPrimary },
-  headerCount: { ...Typography.labelCaps, color: Colors.onPrimaryContainer },
   searchWrap: {
     padding: Spacing.marginPage,
-    paddingBottom: 8,
-    backgroundColor: Colors.primary,
+    paddingBottom: 10,
+    backgroundColor: Colors.surfaceContainerLowest,
   },
   searchInput: {
     height: 42,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.surfaceContainerLow,
     borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
     paddingHorizontal: 14,
     ...Typography.bodySm,
-    color: Colors.onPrimary,
+    color: Colors.onSurface,
   },
   filterScroll: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
     flexGrow: 0, // prevents the horizontal ScrollView from stretching tall
   },
   filterContent: {
     paddingHorizontal: Spacing.marginPage,
-    paddingTop: 9,
-    paddingBottom: 18,
+    paddingTop: 4,
+    paddingBottom: 14,
     alignItems: "center", // stops chips from stretching to fill vertical space
     gap: 8,
   },
@@ -255,17 +255,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: Colors.outlineVariant,
     alignSelf: "flex-start", // backup safeguard against stretch
   },
-  filterChipActive: { backgroundColor: Colors.secondary },
+  filterChipActive: {
+    backgroundColor: Colors.secondary,
+    borderColor: Colors.secondary,
+  },
   filterChipBlocked: { borderColor: Colors.statusBlocked, borderWidth: 1.5 },
-  filterChipBlockedActive: { backgroundColor: Colors.statusBlocked, borderColor: Colors.statusBlocked },
+  filterChipBlockedActive: {
+    backgroundColor: Colors.statusBlocked,
+    borderColor: Colors.statusBlocked,
+  },
   filterChipText: {
     ...Typography.labelCaps,
-    color: Colors.onPrimary,
+    color: Colors.onSurfaceVariant,
     fontSize: 11,
     fontWeight: "600",
   },
@@ -278,7 +284,7 @@ const styles = StyleSheet.create({
   emptyText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
   item: {
     backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     padding: 14,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
@@ -323,17 +329,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   itemRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  blockedChip: {
-    backgroundColor: Colors.statusBlockedBg,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  blockedChipText: {
-    ...Typography.labelCaps,
-    color: Colors.statusBlocked,
-    fontSize: 8,
-  },
   itemDays: {
     ...Typography.labelCaps,
     color: Colors.onSurfaceVariant,

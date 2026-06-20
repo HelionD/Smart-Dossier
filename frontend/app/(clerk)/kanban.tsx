@@ -20,6 +20,7 @@ import {
   PHASE_LABELS,
   getCaseStatusVisual,
 } from "../constants/design";
+import { FolderHeader, StatusPill } from "../components/Dossier";
 import type { Case } from "../types";
 export default function KanbanScreen() {
   const { height: windowHeight } = useWindowDimensions();
@@ -39,23 +40,23 @@ export default function KanbanScreen() {
   // useWindowDimensions may return 0 on first render (web) — guard with fallback.
   const columnHeight = windowHeight > 100 ? windowHeight - 100 : 600;
 
-
   return (
     <View style={styles.root}>
-      {/* Kanban header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Kanban Board</Text>
-          <Text style={styles.headerSub}>Tap a card to open case detail</Text>
-        </View>
-        {blockedCount > 0 && (
-          <View style={styles.blockedBadge}>
-            <Text style={styles.blockedBadgeText}>
-              ⚑ {blockedCount} BLOCKED
-            </Text>
-          </View>
-        )}
-      </View>
+      <FolderHeader
+        eyebrow="Workflow Board"
+        context="EKB Privatization"
+        title="Kanban Board"
+        subtitle="Tap a card to open case detail"
+        right={
+          blockedCount > 0 ? (
+            <StatusPill
+              label={`${blockedCount} blocked`}
+              fg={Colors.statusBlocked}
+              bg={Colors.statusBlockedBg}
+            />
+          ) : undefined
+        }
+      />
 
       {/* Kanban columns — horizontal scroll track */}
       {isLoading ? (
@@ -89,7 +90,10 @@ export default function KanbanScreen() {
               phaseCases.every((c) => c.status === "completed");
 
             return (
-              <View key={phase} style={[styles.column, { maxHeight: columnHeight }]}>
+              <View
+                key={phase}
+                style={[styles.column, { maxHeight: columnHeight }]}
+              >
                 {/* Column header */}
                 <View style={styles.columnHeader}>
                   <Text
@@ -196,13 +200,12 @@ function KanbanCard({ caseItem }: { caseItem: Case }) {
       <View style={styles.cardTop}>
         <Text style={styles.cardCode}>{caseItem.code}</Text>
         {caseItem.is_blocked && (
-          <View
-            style={[styles.blockedChip, { backgroundColor: statusVisual.bg }]}
-          >
-            <Text style={[styles.blockedChipText, { color: statusVisual.fg }]}>
-              {statusVisual.label.toUpperCase()}
-            </Text>
-          </View>
+          <StatusPill
+            small
+            label={statusVisual.label}
+            fg={statusVisual.fg}
+            bg={statusVisual.bg}
+          />
         )}
       </View>
       <Text style={styles.cardTitle} numberOfLines={2}>
@@ -231,34 +234,6 @@ function KanbanCard({ caseItem }: { caseItem: Case }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    backgroundColor: Colors.surfaceContainerLowest,
-    paddingHorizontal: Spacing.marginPage,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerTitle: { ...Typography.headlineSm, color: Colors.primary },
-  headerSub: {
-    ...Typography.bodySm,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-    fontSize: 12,
-  },
-  blockedBadge: {
-    backgroundColor: Colors.errorContainer,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  blockedBadgeText: {
-    ...Typography.labelCaps,
-    color: Colors.onErrorContainer,
-    fontSize: 10,
-  },
 
   // FIX: flex:1 here so the horizontal scroll fills available height (below header)
   trackScroll: { flex: 1 },
@@ -321,17 +296,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cardCode: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 10 },
-  blockedChip: {
-    backgroundColor: Colors.statusBlockedBg,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  blockedChipText: {
-    ...Typography.labelCaps,
-    color: Colors.statusBlocked,
-    fontSize: 8,
-  },
   cardTitle: {
     ...Typography.bodySm,
     color: Colors.onSurface,
