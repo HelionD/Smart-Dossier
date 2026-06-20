@@ -23,8 +23,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: '["*"]'
-      # Replace "*" with your Render URL after first deploy, e.g. ["https://smart-dossier.onrender.com"]
+        value: '["https://smart-dossier.onrender.com"]'
       - key: OLLAMA_HOST
         value: http://localhost:11434
       # Ollama is not bundled in the Free-plan container. AI checklists gracefully no-op when
