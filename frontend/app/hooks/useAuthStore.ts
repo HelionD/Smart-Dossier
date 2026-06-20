@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { router } from 'expo-router';
-import { auth as authApi } from '../api/services';
-import { storage, TOKEN_KEY, USER_KEY } from '../api/client';
-import type { User, LoginRequest, RegisterRequest } from '../types';
+import { create } from "zustand";
+import { router } from "expo-router";
+import { auth as authApi } from "../api/services";
+import { storage, TOKEN_KEY, USER_KEY } from "../api/client";
+import type { User, LoginRequest, RegisterRequest } from "../types";
 
 interface AuthState {
   user: User | null;
@@ -17,8 +17,8 @@ interface AuthState {
 }
 
 const navigate = (role: string) => {
-  if (role === 'clerk') router.replace('/(clerk)/dashboard');
-  else router.replace('/(citizen)/track');
+  if (role === "clerk") router.replace("/(clerk)/dashboard");
+  else router.replace("/(citizen)/track");
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -26,9 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isLoading: false,
   error: null,
-
   clearError: () => set({ error: null }),
-
   hydrate: async () => {
     try {
       const token = await storage.get(TOKEN_KEY);
@@ -40,7 +38,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Storage unavailable (SSR), ignore
     }
   },
-
   login: async (creds) => {
     set({ isLoading: true, error: null });
     try {
@@ -50,10 +47,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: data.user, token: data.access_token, isLoading: false });
       navigate(data.user.role);
     } catch (e: any) {
-      set({ error: e?.response?.data?.detail ?? 'Login failed. Check your credentials.', isLoading: false });
+      set({
+        error:
+          e?.response?.data?.detail ?? "Login failed. Check your credentials.",
+        isLoading: false,
+      });
     }
   },
-
   register: async (data) => {
     set({ isLoading: true, error: null });
     try {
@@ -63,14 +63,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: result.user, token: result.access_token, isLoading: false });
       navigate(result.user.role);
     } catch (e: any) {
-      set({ error: e?.response?.data?.detail ?? 'Registration failed.', isLoading: false });
+      set({
+        error: e?.response?.data?.detail ?? "Registration failed.",
+        isLoading: false,
+      });
     }
   },
-
   logout: async () => {
-    await storage.delete(TOKEN_KEY);
-    await storage.delete(USER_KEY);
-    set({ user: null, token: null });
-    router.replace('/login');
+    try {
+      await storage.delete(TOKEN_KEY);
+      await storage.delete(USER_KEY);
+    } catch (e) {
+      console.error("Logout: failed to clear storage", e);
+    } finally {
+      set({ user: null, token: null });
+      router.replace("/login");
+    }
   },
 }));

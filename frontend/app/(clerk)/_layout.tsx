@@ -1,18 +1,18 @@
-import { Stack, Redirect, usePathname } from 'expo-router';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { useAuthStore } from '../hooks/useAuthStore';
-import { TopAppBar } from '../components/TopAppBar';
-import { Sidebar } from '../components/Sidebar';
-import { BottomNav } from '../components/BottomNav';
-import { Colors } from '../constants/design';
+import { Stack, Redirect, usePathname } from "expo-router";
+import { View, StyleSheet, useWindowDimensions } from "react-native";
+import { useAuthStore } from "../hooks/useAuthStore";
+import { TopAppBar } from "../components/TopAppBar";
+import { Sidebar } from "../components/Sidebar";
+import { BottomNav } from "../components/BottomNav";
+import { Colors } from "../constants/design";
 
 const VIEW_LABELS: Record<string, string> = {
-  dashboard: 'Dashboard',
-  kanban: 'Kanban Board',
-  cases: 'All Cases',
-  'case-detail': 'Case Detail',
-  'new-case': 'New Case',
-  profile: 'Profile',
+  dashboard: "Dashboard",
+  kanban: "Kanban Board",
+  cases: "All Cases",
+  "case-detail": "Case Detail",
+  "new-case": "New Case",
+  profile: "Profile",
 };
 
 export default function ClerkLayout() {
@@ -21,25 +21,28 @@ export default function ClerkLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  if (!user || user.role !== 'clerk') return <Redirect href="/login" />;
+  if (!user || user.role !== "clerk") return <Redirect href="/login" />;
 
   const initials = user.full_name
-    .split(' ')
+    .split(" ")
     .map((n) => n[0])
-    .join('')
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 
   // Derive current view label from pathname segments
-  const parts = pathname.split('/').filter(Boolean);
-  const segment = parts.length >= 2 && parts[0] === 'clerk' ? (parts[1] ?? 'dashboard') : 'dashboard';
+  const parts = pathname.split("/").filter(Boolean);
+  const segment =
+    parts.length >= 2 && parts[0] === "clerk"
+      ? (parts[1] ?? "dashboard")
+      : "dashboard";
 
   return (
     <View style={styles.root}>
-      <TopAppBar
-        viewLabel={VIEW_LABELS[segment] ?? 'Dashboard'}
+      {/* <TopAppBar
+        viewLabel={VIEW_LABELS[segment] ?? "Dashboard"}
         userInitials={initials}
-      />
+      /> */}
 
       <View style={styles.body}>
         {isDesktop && (
@@ -74,11 +77,11 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    flexDirection: 'row',
-    overflow: 'hidden',
+    flexDirection: "row",
+    overflow: "hidden",
   },
   content: {
     flex: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
 });

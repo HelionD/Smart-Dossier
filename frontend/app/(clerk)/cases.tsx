@@ -1,33 +1,52 @@
-import React, { useState } from 'react';
-import { Platform } from 'react-native';
+import React, { useState } from "react";
+import { Platform } from "react-native";
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl,
-} from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
-import { cases } from '../api/services';
-import { Colors, Typography, Spacing, BorderRadius, PHASE_LABELS, BOTTLENECK_PHASES } from '../constants/design';
-import type { Case } from '../types';
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { router, useLocalSearchParams } from "expo-router";
+import { cases } from "../api/services";
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  PHASE_LABELS,
+  BOTTLENECK_PHASES,
+} from "../constants/design";
+import type { Case } from "../types";
 
 export default function CasesScreen() {
   const { phase: paramPhase } = useLocalSearchParams<{ phase?: string }>();
   const [selectedPhase, setSelectedPhase] = useState<number | null>(
-    paramPhase ? parseInt(paramPhase) : null
+    paramPhase ? parseInt(paramPhase) : null,
   );
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
-  const { data: items = [], isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['cases', selectedPhase],
+  const {
+    data: items = [],
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ["cases", selectedPhase],
     queryFn: () => cases.list(selectedPhase ?? undefined),
     refetchInterval: 30_000,
   });
 
   const filtered = search
-    ? items.filter(c =>
-        c.code.toLowerCase().includes(search.toLowerCase()) ||
-        c.title.toLowerCase().includes(search.toLowerCase()) ||
-        (c.owner_name ?? '').toLowerCase().includes(search.toLowerCase())
+    ? items.filter(
+        (c) =>
+          c.code.toLowerCase().includes(search.toLowerCase()) ||
+          c.title.toLowerCase().includes(search.toLowerCase()) ||
+          (c.owner_name ?? "").toLowerCase().includes(search.toLowerCase()),
       )
     : items;
 
@@ -51,28 +70,47 @@ export default function CasesScreen() {
       </View>
 
       {/* Phase filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterContent}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterContent}
+      >
         <TouchableOpacity
-          style={[styles.filterChip, selectedPhase === null && styles.filterChipActive]}
+          style={[
+            styles.filterChip,
+            selectedPhase === null && styles.filterChipActive,
+          ]}
           onPress={() => setSelectedPhase(null)}
         >
-          <Text style={[styles.filterChipText, selectedPhase === null && styles.filterChipTextActive]}>All</Text>
+          <Text
+            style={[
+              styles.filterChipText,
+              selectedPhase === null && styles.filterChipTextActive,
+            ]}
+          >
+            All
+          </Text>
         </TouchableOpacity>
-        {[1, 2, 3, 4, 5, 6, 7].map(p => (
+        {[1, 2, 3, 4, 5, 6, 7].map((p) => (
           <TouchableOpacity
             key={p}
             style={[
               styles.filterChip,
               selectedPhase === p && styles.filterChipActive,
               BOTTLENECK_PHASES.includes(p) && styles.filterChipWarn,
-              BOTTLENECK_PHASES.includes(p) && selectedPhase === p && styles.filterChipWarnActive,
+              BOTTLENECK_PHASES.includes(p) &&
+                selectedPhase === p &&
+                styles.filterChipWarnActive,
             ]}
             onPress={() => setSelectedPhase(selectedPhase === p ? null : p)}
           >
-            <Text style={[
-              styles.filterChipText,
-              selectedPhase === p && styles.filterChipTextActive,
-            ]}>
+            <Text
+              style={[
+                styles.filterChipText,
+                selectedPhase === p && styles.filterChipTextActive,
+              ]}
+            >
               F{p}
             </Text>
           </TouchableOpacity>
@@ -83,17 +121,26 @@ export default function CasesScreen() {
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.secondary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={Colors.secondary}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
-          <ActivityIndicator color={Colors.secondary} style={{ marginTop: 48 }} />
+          <ActivityIndicator
+            color={Colors.secondary}
+            style={{ marginTop: 48 }}
+          />
         ) : filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No cases found</Text>
           </View>
         ) : (
-          filtered.map(c => <CaseItem key={c.id} caseItem={c} />)
+          filtered.map((c) => <CaseItem key={c.id} caseItem={c} />)
         )}
       </ScrollView>
     </View>
@@ -105,30 +152,51 @@ function CaseItem({ caseItem }: { caseItem: Case }) {
   return (
     <TouchableOpacity
       style={[styles.item, caseItem.is_blocked && styles.itemBlocked]}
-      onPress={() => router.push({ pathname: '/(clerk)/case-detail', params: { id: caseItem.id } })}
+      onPress={() =>
+        router.push({
+          pathname: "/(clerk)/case-detail",
+          params: { id: caseItem.id },
+        })
+      }
       activeOpacity={0.75}
     >
       <View style={styles.itemTop}>
         <Text style={styles.itemCode}>{caseItem.code}</Text>
-        <View style={[styles.phaseBadge, isBottleneck && styles.phaseBadgeWarn]}>
-          <Text style={[styles.phaseBadgeText, isBottleneck && styles.phaseBadgeTextWarn]}>
+        <View
+          style={[styles.phaseBadge, isBottleneck && styles.phaseBadgeWarn]}
+        >
+          <Text
+            style={[
+              styles.phaseBadgeText,
+              isBottleneck && styles.phaseBadgeTextWarn,
+            ]}
+          >
             F{caseItem.current_phase}
           </Text>
         </View>
       </View>
-      <Text style={styles.itemTitle} numberOfLines={1}>{caseItem.title}</Text>
+      <Text style={styles.itemTitle} numberOfLines={1}>
+        {caseItem.title}
+      </Text>
       {caseItem.owner_name && (
         <Text style={styles.itemOwner}>{caseItem.owner_name}</Text>
       )}
       <View style={styles.itemBottom}>
-        <Text style={styles.itemPhaseLabel}>{PHASE_LABELS[caseItem.current_phase]}</Text>
+        <Text style={styles.itemPhaseLabel}>
+          {PHASE_LABELS[caseItem.current_phase]}
+        </Text>
         <View style={styles.itemRight}>
           {caseItem.is_blocked && (
             <View style={styles.blockedChip}>
               <Text style={styles.blockedChipText}>BLOCKED</Text>
             </View>
           )}
-          <Text style={[styles.itemDays, caseItem.is_blocked && styles.itemDaysUrgent]}>
+          <Text
+            style={[
+              styles.itemDays,
+              caseItem.is_blocked && styles.itemDaysUrgent,
+            ]}
+          >
             {caseItem.days_in_phase} days
           </Text>
         </View>
@@ -144,13 +212,17 @@ const styles = StyleSheet.create({
     paddingTop: Platform.select({ ios: 60, default: 48 }),
     paddingBottom: 16,
     paddingHorizontal: Spacing.marginPage,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
   },
   headerLabel: { ...Typography.headlineMdMobile, color: Colors.onPrimary },
   headerCount: { ...Typography.labelCaps, color: Colors.onPrimaryContainer },
-  searchWrap: { padding: Spacing.marginPage, paddingBottom: 8, backgroundColor: Colors.primary },
+  searchWrap: {
+    padding: Spacing.marginPage,
+    paddingBottom: 8,
+    backgroundColor: Colors.primary,
+  },
   searchInput: {
     height: 42,
     backgroundColor: Colors.primaryContainer,
@@ -159,34 +231,104 @@ const styles = StyleSheet.create({
     ...Typography.bodySm,
     color: Colors.onPrimary,
   },
-  filterScroll: { backgroundColor: Colors.primary },
-  filterContent: { paddingHorizontal: Spacing.marginPage, paddingBottom: 14, gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: BorderRadius.full, backgroundColor: Colors.primaryContainer, borderWidth: 1, borderColor: 'transparent' },
+  filterScroll: {
+    backgroundColor: Colors.primary,
+    flexGrow: 0, // prevents the horizontal ScrollView from stretching tall
+  },
+  filterContent: {
+    paddingHorizontal: Spacing.marginPage,
+    paddingTop: 9,
+    paddingBottom: 18,
+    alignItems: "center", // stops chips from stretching to fill vertical space
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primaryContainer,
+    borderWidth: 1,
+    borderColor: "transparent",
+    alignSelf: "flex-start", // backup safeguard against stretch
+  },
   filterChipActive: { backgroundColor: Colors.secondary },
   filterChipWarn: { borderColor: Colors.statusInReview },
   filterChipWarnActive: { backgroundColor: Colors.statusInReview },
-  filterChipText: { ...Typography.labelCaps, color: Colors.onPrimaryContainer, fontSize: 9 },
+  filterChipText: {
+    ...Typography.labelCaps,
+    color: Colors.onPrimary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
   filterChipTextActive: { color: Colors.onSecondary },
   list: { flex: 1 },
   listContent: { padding: Spacing.marginPage, gap: 10, paddingBottom: 32 },
-  empty: { alignItems: 'center', padding: 48 },
+  empty: { alignItems: "center", padding: 48 },
   emptyText: { ...Typography.bodySm, color: Colors.onSurfaceVariant },
-  item: { backgroundColor: Colors.surfaceContainerLowest, borderRadius: BorderRadius.lg, padding: 14, borderWidth: 1, borderColor: Colors.outlineVariant, gap: 6 },
+  item: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: BorderRadius.lg,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    gap: 6,
+  },
   itemBlocked: { borderColor: Colors.error, borderWidth: 1.5 },
-  itemTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  itemTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   itemCode: { ...Typography.labelCaps, color: Colors.secondary, fontSize: 9 },
-  phaseBadge: { backgroundColor: Colors.surfaceContainerHigh, borderRadius: BorderRadius.sm, paddingHorizontal: 7, paddingVertical: 3 },
+  phaseBadge: {
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
   phaseBadgeWarn: { backgroundColor: Colors.statusInReviewBg },
-  phaseBadgeText: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 9 },
+  phaseBadgeText: {
+    ...Typography.labelCaps,
+    color: Colors.onSurfaceVariant,
+    fontSize: 9,
+  },
   phaseBadgeTextWarn: { color: Colors.statusInReview },
-  itemTitle: { ...Typography.bodySm, color: Colors.onSurface, fontFamily: 'Inter_600SemiBold' },
-  itemOwner: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12 },
-  itemBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  itemPhaseLabel: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 11 },
-  itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  blockedChip: { backgroundColor: Colors.statusBlockedBg, borderRadius: BorderRadius.sm, paddingHorizontal: 6, paddingVertical: 3 },
-  blockedChipText: { ...Typography.labelCaps, color: Colors.statusBlocked, fontSize: 8 },
-  itemDays: { ...Typography.labelCaps, color: Colors.onSurfaceVariant, fontSize: 9 },
+  itemTitle: {
+    ...Typography.bodySm,
+    color: Colors.onSurface,
+    fontFamily: "Inter_600SemiBold",
+  },
+  itemOwner: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 12,
+  },
+  itemBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  itemPhaseLabel: {
+    ...Typography.bodySm,
+    color: Colors.onSurfaceVariant,
+    fontSize: 11,
+  },
+  itemRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  blockedChip: {
+    backgroundColor: Colors.statusBlockedBg,
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  blockedChipText: {
+    ...Typography.labelCaps,
+    color: Colors.statusBlocked,
+    fontSize: 8,
+  },
+  itemDays: {
+    ...Typography.labelCaps,
+    color: Colors.onSurfaceVariant,
+    fontSize: 9,
+  },
   itemDaysUrgent: { color: Colors.error },
 });
-
