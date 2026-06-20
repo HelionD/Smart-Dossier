@@ -39,6 +39,10 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download GLiNER2 model at build time (avoids ~400MB download on cold start)
+# Uses a throwaway Python import that triggers HuggingFace cache population.
+RUN python3 -c "from gliner2 import GLiNER2; GLiNER2.from_pretrained('fastino/gliner2-base-v1')"
+
 # Backend code
 COPY backend/ .
 

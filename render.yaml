@@ -23,9 +23,12 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: '["*"]'  # lock down after deploy to your Render URL
+        value: '["*"]'
+      # Replace "*" with your Render URL after first deploy, e.g. ["https://smart-dossier.onrender.com"]
       - key: OLLAMA_HOST
-        value: http://localhost:11434  # not bundled; AI features require Standard plan + Ollama container
+        value: http://localhost:11434
+      # Ollama is not bundled in the Free-plan container. AI checklists gracefully no-op when
+      # unavailable. Add Ollama to Dockerfile.render for full AI features (requires Standard plan).
       - key: OLLAMA_MODEL
         value: qwen2.5:1.5b
       - key: UPLOAD_DIR
