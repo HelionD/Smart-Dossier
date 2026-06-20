@@ -29,7 +29,6 @@ import asyncio
 import logging
 import re
 from functools import lru_cache
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

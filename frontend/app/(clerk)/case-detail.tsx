@@ -483,14 +483,6 @@ export default function CaseDetailScreen() {
             {/* ── Advance Phase ── */}
             {tab === "advance" && (
               <View style={styles.advanceCard}>
-                <View>
-                  <Text style={styles.advanceTitle}>
-                    Advance to Phase {caseItem.current_phase + 1}
-                  </Text>
-                  <Text style={styles.advanceSub}>
-                    {PHASE_DESCRIPTIONS[caseItem.current_phase + 1]}
-                  </Text>
-                </View>
                 {canAdvance ? (
                   <View>
                     <Text style={styles.advanceTitle}>
@@ -510,11 +502,82 @@ export default function CaseDetailScreen() {
                     </Text>
                   </View>
                 )}
-                {!canAdvance && (
+                {caseItem.phase_checklist && (
+                  <View style={styles.checklistCard}>
+                    <Text style={styles.checklistTitle}>
+                      PHASE COMPLETENESS CHECKLIST
+                    </Text>
+                    {Object.entries(caseItem.phase_checklist).map(
+                      ([phase, ok]) => (
+                        <View key={phase} style={styles.checkItem}>
+                          <Text style={ok ? styles.checkOk : styles.checkFail}>
+                            {ok ? "\u2713" : "\u2717"}
+                          </Text>
+                          <Text
+                            style={
+                              ok ? styles.checkOkText : styles.checkFailText
+                            }
+                          >
+                            Phase {phase}: {PHASE_LABELS[Number(phase)]}
+                          </Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                )}
+                {canAdvance ? (
+                  <>
+                    <View>
+                      <Text style={styles.notesLabel}>TRANSITION NOTES</Text>
+                      <TextInput
+                        style={styles.notesInput}
+                        value={advanceNotes}
+                        onChangeText={setAdvanceNotes}
+                        placeholder="Optional notes about this phase transition..."
+                        placeholderTextColor={Colors.onSurfaceVariant}
+                        multiline
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.advanceBtn,
+                        advanceMutation.isPending && styles.advanceBtnDisabled,
+                      ]}
+                      onPress={() => {
+                        Alert.alert(
+                          "Confirm Phase Advance",
+                          `Advance to Phase ${caseItem.current_phase + 1}?`,
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Advance",
+                              onPress: () =>
+                                advanceMutation.mutate(
+                                  caseItem.current_phase + 1
+                                ),
+                            },
+                          ]
+                        );
+                      }}
+                      disabled={advanceMutation.isPending}
+                    >
+                      {advanceMutation.isPending ? (
+                        <ActivityIndicator color={Colors.onSecondary} />
+                      ) : (
+                        <Text style={styles.advanceBtnText}>
+                          Confirm — Advance to Phase{" "}
+                          {caseItem.current_phase + 1}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                ) : (
                   <View style={styles.finalStateCard}>
                     <Text style={styles.finalStateTitle}>Case Complete</Text>
                     <Text style={styles.finalStateText}>
-                      This case has reached Phase 7 (Property Registration), the final phase of the EKB process. No further phase advancement is possible.
+                      This case has reached Phase 7 (Property Registration),
+                      the final phase of the EKB process. No further phase
+                      advancement is possible.
                     </Text>
                   </View>
                 )}
@@ -1042,25 +1105,6 @@ const styles = StyleSheet.create({
     ...Typography.bodySm,
     color: Colors.statusCompleted,
     fontFamily: "Inter_600SemiBold",
-  },
-  finalStateText: {
-    ...Typography.bodySm,
-    color: Colors.onSurfaceVariant,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  finalStateCard: {
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: BorderRadius.lg,
-    padding: 20,
-    gap: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.statusCompleted,
-  },
-  finalStateTitle: {
-    ...Typography.bodySm,
-    color: Colors.statusCompleted,
-    fontFamily: 'Inter_600SemiBold',
   },
   finalStateText: {
     ...Typography.bodySm,

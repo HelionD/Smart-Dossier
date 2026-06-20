@@ -9,8 +9,6 @@ const API_BASE = __DEV__
     : "http://10.63.159.70:8000"
   : "http://10.63.159.70:8000"; // empty = same origin, nginx handles /api → backend
 
-// export const TOKEN_KEY = "dosja_access_token";
-// export const USER_KEY = "dosja_user";
 export const TOKEN_KEY = "ekb_access_token";
 export const USER_KEY = "ekb_user";
 

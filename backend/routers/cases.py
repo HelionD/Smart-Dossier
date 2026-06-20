@@ -31,12 +31,10 @@ async def _get_case_or_404(case_id: UUID, db: AsyncSession) -> Case:
         raise HTTPException(404, "Case not found")
     return case
 
-
 def _assert_access(case: Case, user: User) -> None:
     """Citizens get a 404 (not 403) to avoid leaking whether a case exists."""
     if user.role == "citizen" and case.citizen_id != user.id:
         raise HTTPException(404, "Case not found")
-
 
 
 @router.get("/", response_model=list[CaseRead])

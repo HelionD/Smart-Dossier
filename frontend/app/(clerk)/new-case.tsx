@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Platform } from 'react-native';
 import {
   View, Text, ScrollView, StyleSheet, TextInput,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -47,7 +46,9 @@ export default function NewCaseScreen() {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
             The case will be automatically created in Phase 1 (Public Notice) and assigned a unique EKB code.
+          </Text>
         </View>
 
         <Field label="Case Title *" hint="e.g. Hoxha Family – Apt 4B, Block">

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from db import get_session
@@ -30,8 +29,3 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_session)):
     token = create_access_token(str(user.id), user.role)
     return TokenResponse(access_token=token, user=UserRead.model_validate(user))
 
-@router.get("/me", response_model=UserRead)
-async def me(db: AsyncSession = Depends(get_session), token: str = ""):
-    from auth import get_current_user
-    # handled via dependency in real usage
-    raise HTTPException(status_code=501)

@@ -20,7 +20,6 @@ export interface Case {
   id: string;
   code: string;
   title: string;
-  process_type: string;
   owner_name: string | null;
   property_id: string | null;
   zone: string | null;
