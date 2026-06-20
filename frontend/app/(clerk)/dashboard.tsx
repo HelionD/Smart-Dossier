@@ -23,6 +23,54 @@ import {
 } from "../constants/design";
 import { useAuthStore } from "../hooks/useAuthStore";
 
+function getDynamicSubtitle(
+  blocked: number,
+  active: number,
+  completion: number,
+  avgCycle: number
+): string {
+  if (active === 0) {
+    const empty = [
+      "No active cases yet — ready for the first submission.",
+      "The queue is empty. Add a new case to get started.",
+      "Nothing in progress right now. Waiting for new cases.",
+    ];
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  let pool: string[] = [];
+
+  if (blocked > 0) {
+    pool = [
+      `${blocked} case${blocked !== 1 ? "s" : ""} need attention — the rest of the pipeline is moving.`,
+      `Watch out: ${blocked} stuck case${blocked !== 1 ? "s" : ""} against ${active} active. Time to follow up.`,
+      `The pipeline has a jam — ${blocked} case${blocked !== 1 ? "s" : ""} haven't moved in too long.`,
+      `${blocked} red flag${blocked !== 1 ? "s" : ""} in the queue. Everything else is on track.`,
+    ];
+  } else {
+    pool = [
+      `All ${active} active case${active !== 1 ? "s" : ""} are moving — nothing is stuck right now.`,
+      `Clean slate: ${active} case${active !== 1 ? "s" : ""} in progress, none blocked.`,
+      `The pipeline looks healthy. ${active} case${active !== 1 ? "s" : ""} in flight, zero delays.`,
+      `No bottlenecks today — ${active} active case${active !== 1 ? "s" : ""} all progressing normally.`,
+    ];
+  }
+
+  if (avgCycle > 0 && avgCycle <= 30) {
+    pool.push(`Good velocity: an average cycle of ${avgCycle} days across ${active} active cases.`);
+  } else if (avgCycle > 60) {
+    pool.push(`Cycle times are running long at ${avgCycle} days average — worth reviewing phases 3 and 6.`);
+  }
+
+  if (completion >= 70) {
+    pool.push(`${completion}% of cases have reached registration — strong throughput overall.`);
+  } else if (completion > 0 && completion < 30) {
+    pool.push(`${completion}% completion rate. Most cases are still in progress.`);
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 export default function DashboardScreen() {
   const user = useAuthStore((s) => s.user);
 
@@ -58,6 +106,11 @@ export default function DashboardScreen() {
     0,
   );
 
+  const pageSub = React.useMemo(
+    () => getDynamicSubtitle(blockedCount, items.length, stats?.completion_rate ?? 0, stats?.avg_cycle_days ?? 0),
+    [blockedCount, items.length, stats?.completion_rate, stats?.avg_cycle_days]
+  );
+
   return (
     <View style={styles.root}>
       <ScrollView
@@ -77,9 +130,7 @@ export default function DashboardScreen() {
           <View style={styles.topLeft}>
             <Text style={styles.kicker}>EKB PRIVATIZATION · 7 PHASES</Text>
             <Text style={styles.pageTitle}>Registry Overview</Text>
-            <Text style={styles.pageSub}>
-              Here's how things stand across every active case right now.
-            </Text>
+            <Text style={styles.pageSub}>{pageSub}</Text>
           </View>
           <TouchableOpacity
             style={styles.kanbanBtn}
