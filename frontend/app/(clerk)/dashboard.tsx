@@ -23,49 +23,67 @@ import {
 } from "../constants/design";
 import { useAuthStore } from "../hooks/useAuthStore";
 
+// ── Dynamic subtitle ────────────────────────────────────────────────────────
 function getDynamicSubtitle(
-  blocked: number,
-  active: number,
-  completion: number,
-  avgCycle: number
+  blockedCount: number,
+  totalActive: number,
+  completionRate: number,
+  avgCycleDays: number
 ): string {
-  if (active === 0) {
-    const empty = [
+  if (totalActive === 0) {
+    const pool = [
       "No active cases yet — ready for the first submission.",
       "The queue is empty. Add a new case to get started.",
       "Nothing in progress right now. Waiting for new cases.",
     ];
-    return empty[Math.floor(Math.random() * empty.length)];
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   let pool: string[] = [];
 
-  if (blocked > 0) {
+  if (blockedCount > 0) {
     pool = [
-      `${blocked} case${blocked !== 1 ? "s" : ""} need attention — the rest of the pipeline is moving.`,
-      `Watch out: ${blocked} stuck case${blocked !== 1 ? "s" : ""} against ${active} active. Time to follow up.`,
-      `The pipeline has a jam — ${blocked} case${blocked !== 1 ? "s" : ""} haven't moved in too long.`,
-      `${blocked} red flag${blocked !== 1 ? "s" : ""} in the queue. Everything else is on track.`,
+      `${blockedCount} case${blockedCount !== 1 ? "s" : ""} need attention — the rest of the pipeline is moving.`,
+      `Watch out: ${blockedCount} stuck case${blockedCount !== 1 ? "s" : ""} out of ${totalActive} active. Time to follow up.`,
+      `The pipeline has a jam — ${blockedCount} case${blockedCount !== 1 ? "s" : ""} haven't moved in too long.`,
+      `${blockedCount} red flag${blockedCount !== 1 ? "s" : ""} in the queue. Everything else is on track.`,
     ];
   } else {
     pool = [
-      `All ${active} active case${active !== 1 ? "s" : ""} are moving — nothing is stuck right now.`,
-      `Clean slate: ${active} case${active !== 1 ? "s" : ""} in progress, none blocked.`,
-      `The pipeline looks healthy. ${active} case${active !== 1 ? "s" : ""} in flight, zero delays.`,
-      `No bottlenecks today — ${active} active case${active !== 1 ? "s" : ""} all progressing normally.`,
+      `Clean slate: ${totalActive} case${totalActive !== 1 ? "s" : ""} in progress, none blocked.`,
+      `All ${totalActive} active case${totalActive !== 1 ? "s" : ""} are moving — nothing is stuck right now.`,
+      `The pipeline looks healthy. ${totalActive} case${totalActive !== 1 ? "s" : ""} in flight, zero delays.`,
+      `No bottlenecks today — ${totalActive} active case${totalActive !== 1 ? "s" : ""} all progressing normally.`,
     ];
   }
 
-  if (avgCycle > 0 && avgCycle <= 30) {
-    pool.push(`Good velocity: an average cycle of ${avgCycle} days across ${active} active cases.`);
-  } else if (avgCycle > 60) {
-    pool.push(`Cycle times are running long at ${avgCycle} days average — worth reviewing phases 3 and 6.`);
+  if (avgCycleDays > 0 && avgCycleDays <= 30) {
+    pool.push(
+      `Good velocity: an average cycle of ${avgCycleDays} days across ${totalActive} active cases.`
+    );
+    pool.push(
+      `Cases are closing in ${avgCycleDays} days on average — ahead of schedule.`
+    );
+  } else if (avgCycleDays > 60) {
+    pool.push(
+      `Cycle times are running long at ${avgCycleDays} days average — worth reviewing phases 3 and 6.`
+    );
+    pool.push(
+      `Average turnaround is ${avgCycleDays} days. The known bottlenecks may be adding up.`
+    );
   }
 
-  if (completion >= 70) {
-    pool.push(`${completion}% of cases have reached registration — strong throughput overall.`);
-  } else if (completion > 0 && completion < 30) {
-    pool.push(`${completion}% completion rate. Most cases are still in progress.`);
+  if (completionRate >= 70) {
+    pool.push(
+      `${Math.round(completionRate)}% of cases have reached registration — strong throughput overall.`
+    );
+  } else if (completionRate > 0 && completionRate < 30) {
+    pool.push(
+      `${Math.round(completionRate)}% completion rate. Most cases are still in progress.`
+    );
+    pool.push(
+      `Only ${Math.round(completionRate)}% of cases have completed so far — the pipeline still has room to clear.`
+    );
   }
 
   return pool[Math.floor(Math.random() * pool.length)];
@@ -106,9 +124,17 @@ export default function DashboardScreen() {
     0,
   );
 
-  const pageSub = React.useMemo(
-    () => getDynamicSubtitle(blockedCount, items.length, stats?.completion_rate ?? 0, stats?.avg_cycle_days ?? 0),
-    [blockedCount, items.length, stats?.completion_rate, stats?.avg_cycle_days]
+  // ── Dynamic subtitle — recalculates when data changes ────────────────────
+  const dynamicSubtitle = React.useMemo(
+    () =>
+      getDynamicSubtitle(
+        blockedCount,
+        stats?.total_active ?? items.length,
+        stats?.completion_rate ?? 0,
+        stats?.avg_cycle_days ?? 0,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [blockedCount, stats?.total_active, stats?.completion_rate, stats?.avg_cycle_days],
   );
 
   return (
@@ -130,7 +156,8 @@ export default function DashboardScreen() {
           <View style={styles.topLeft}>
             <Text style={styles.kicker}>EKB PRIVATIZATION · 7 PHASES</Text>
             <Text style={styles.pageTitle}>Registry Overview</Text>
-            <Text style={styles.pageSub}>{pageSub}</Text>
+            {/* ── Dynamic subtitle replaces static string ── */}
+            <Text style={styles.pageSub}>{dynamicSubtitle}</Text>
           </View>
           <TouchableOpacity
             style={styles.kanbanBtn}
@@ -142,11 +169,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Signature element: a horizontal phase ribbon showing the shape of
-            the whole pipeline at a glance — segment width follows case
-            count, color follows status, so a clerk reads "where's the
-            bottleneck and how big is it" in one look instead of scanning
-            seven separate rows. */}
+        {/* Pipeline ribbon */}
         <View style={styles.ribbonCard}>
           <View style={styles.ribbonHeaderRow}>
             <Text style={styles.ribbonTitle}>Pipeline at a glance</Text>
@@ -188,9 +211,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Priority: urgent / blocked cases — restrained tint instead of a
-            solid saturated block, so it reads as "important" without
-            competing visually with the rest of the page. */}
+        {/* Urgent / all-clear card */}
         {blocked.length > 0 ? (
           <TouchableOpacity
             style={styles.urgentCard}
@@ -280,7 +301,6 @@ export default function DashboardScreen() {
                     isCompleted && styles.phaseRowDone,
                   ]}
                 >
-                  {/* F-badge */}
                   <View
                     style={[
                       styles.fBadge,
@@ -291,7 +311,6 @@ export default function DashboardScreen() {
                     <Text style={styles.fBadgeText}>F{phase}</Text>
                   </View>
 
-                  {/* Info */}
                   <View style={styles.phaseInfo}>
                     <View style={styles.phaseInfoTop}>
                       <Text style={styles.phaseName}>
@@ -310,7 +329,6 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
 
-                  {/* Count */}
                   <View style={styles.phaseCountCol}>
                     <Text
                       style={[
@@ -379,7 +397,6 @@ const styles = StyleSheet.create({
     alignSelf: "center" as const,
   },
 
-  // Header row
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -418,7 +435,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
 
-  // Phase ribbon — the signature element
   ribbonCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,
@@ -450,10 +466,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceContainer,
     gap: 2,
   },
-  ribbonSeg: {
-    backgroundColor: Colors.secondary,
-    minWidth: 3,
-  },
+  ribbonSeg: { backgroundColor: Colors.secondary, minWidth: 3 },
   ribbonSegWarn: { backgroundColor: Colors.statusInReview },
   ribbonSegDone: { backgroundColor: Colors.statusCompleted },
   ribbonSegEmpty: { backgroundColor: Colors.outlineVariant, opacity: 0.5 },
@@ -466,8 +479,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
 
-  // Urgent card — tinted, not solid-saturated, so it reads as important
-  // without shouting over everything else on the page.
   urgentCard: {
     backgroundColor: Colors.errorContainer,
     borderWidth: 1,
@@ -512,7 +523,6 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 
-  // All-clear state when nothing is blocked
   allClearCard: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderWidth: 1,
@@ -538,7 +548,6 @@ const styles = StyleSheet.create({
   },
   allClearText: { ...Typography.bodySm, color: Colors.onSurface },
 
-  // Stats
   statsRow: {
     flexDirection: "row",
     backgroundColor: Colors.surfaceContainerLowest,
@@ -575,14 +584,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // Section
   sectionTitle: {
     ...Typography.headlineSm,
     color: Colors.primary,
     marginBottom: 12,
   },
 
-  // Phase rows
   phaseList: { gap: 0 },
   phaseRow: {
     flexDirection: "row",
@@ -597,7 +604,6 @@ const styles = StyleSheet.create({
   phaseRowWarn: { borderColor: Colors.statusInReview, borderWidth: 1.5 },
   phaseRowDone: { borderColor: Colors.statusCompleted },
 
-  // F-badge
   fBadge: {
     width: 52,
     alignSelf: "stretch",
@@ -613,7 +619,6 @@ const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
   },
 
-  // Phase info
   phaseInfo: {
     flex: 1,
     paddingHorizontal: 16,
@@ -649,7 +654,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // Phase count
   phaseCountCol: {
     paddingHorizontal: 24,
     alignItems: "center",
