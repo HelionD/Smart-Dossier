@@ -32,6 +32,7 @@ class CaseCreate(BaseModel):
     property_id: Optional[str] = None
     zone: Optional[str] = None
     income_bracket: Optional[str] = None
+    family_size: Optional[int] = None
     citizen_id: Optional[UUID] = None
 
 class CaseUpdate(BaseModel):
@@ -40,6 +41,7 @@ class CaseUpdate(BaseModel):
     property_id: Optional[str] = None
     zone: Optional[str] = None
     income_bracket: Optional[str] = None
+    family_size: Optional[int] = None
     status: Optional[str] = None
 
 class CaseRead(BaseModel):
@@ -50,6 +52,7 @@ class CaseRead(BaseModel):
     property_id: Optional[str] = None
     zone: Optional[str] = None
     income_bracket: Optional[str] = None
+    family_size: Optional[int] = None
     current_phase: int
     status: str
     phase_entered_at: datetime

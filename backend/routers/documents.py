@@ -205,7 +205,7 @@ async def confirm_extraction(
     case = case_result.scalar_one_or_none()
     if case:
         data = doc.extracted_data
-        for field in ("owner_name", "property_id", "zone", "income_bracket"):
+        for field in ("owner_name", "property_id", "zone", "income_bracket", "family_size"):
             if data.get(field):
                 setattr(case, field, data[field])
 

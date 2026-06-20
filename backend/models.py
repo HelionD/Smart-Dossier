@@ -26,6 +26,7 @@ class Case(Base):
     property_id = Column(String, nullable=True)
     zone = Column(String, nullable=True)
     income_bracket = Column(String, nullable=True)
+    family_size = Column(Integer, nullable=True)
     current_phase = Column(Integer, nullable=False, default=1)
     status = Column(String, nullable=False, default="active")  # active | completed
     phase_entered_at = Column(DateTime(timezone=True), default=utcnow)

@@ -138,6 +138,7 @@ async def create_case(
         property_id=body.property_id,
         zone=body.zone,
         income_bracket=body.income_bracket,
+        family_size=body.family_size,
         citizen_id=body.citizen_id,
         assigned_to=user.id,
     )
