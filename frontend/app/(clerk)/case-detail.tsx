@@ -78,6 +78,12 @@ export default function CaseDetailScreen() {
       qc.invalidateQueries({ queryKey: ["cases"] });
       setAdvanceNotes("");
     },
+    onError: (e: any) => {
+      Alert.alert(
+        "Advance Failed",
+        e?.response?.data?.detail ?? "Could not advance phase. Please try again.",
+      );
+    },
   });
 
   if (isLoading || !caseItem) {

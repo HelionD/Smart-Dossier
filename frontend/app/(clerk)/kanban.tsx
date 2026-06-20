@@ -75,13 +75,12 @@ export default function KanbanScreen() {
         >
           {[1, 2, 3, 4, 5, 6, 7].map((phase) => {
             const phaseCases = items.filter((c) => c.current_phase === phase);
-            // Column color now reflects whether any case actually sitting in
-            // this phase right now is blocked — not whether the phase number
-            // is on a static "usually slow" list. An empty or healthy phase
-            // 3/6 column stays neutral; it only goes amber when a real case
-            // in it has tripped the blocked threshold.
+            // Column color reflects the cases sitting in it right now:
+            // red if any is blocked, green if all are completed, neutral otherwise.
             const hasBlockedCases = phaseCases.some((c) => c.is_blocked);
-            const isCompleted = phase === 7;
+            const allCompleted =
+              phaseCases.length > 0 &&
+              phaseCases.every((c) => c.status === "completed");
 
             return (
               <View key={phase} style={styles.column}>
@@ -90,8 +89,8 @@ export default function KanbanScreen() {
                   <Text
                     style={[
                       styles.columnLabel,
-                      hasBlockedCases && styles.columnLabelWarn,
-                      isCompleted && styles.columnLabelDone,
+                      hasBlockedCases && styles.columnLabelBlocked,
+                      allCompleted && styles.columnLabelDone,
                     ]}
                   >
                     F{phase} · {PHASE_LABELS[phase]}
@@ -99,27 +98,27 @@ export default function KanbanScreen() {
                   <View
                     style={[
                       styles.countBadge,
-                      hasBlockedCases && styles.countBadgeWarn,
-                      isCompleted && styles.countBadgeDone,
+                      hasBlockedCases && styles.countBadgeBlocked,
+                      allCompleted && styles.countBadgeDone,
                     ]}
                   >
                     <Text
                       style={[
                         styles.countText,
-                        hasBlockedCases && styles.countTextWarn,
-                        isCompleted && styles.countTextDone,
+                        hasBlockedCases && styles.countTextBlocked,
+                        allCompleted && styles.countTextDone,
                       ]}
                     >
                       {phaseCases.length}
                     </Text>
                   </View>
                   {hasBlockedCases && (
-                    <Text style={styles.bottleneckIcon}>⚠</Text>
+                    <Text style={styles.blockedIcon}>⚠</Text>
                   )}
                 </View>
 
                 {/* Column cards */}
-                {isCompleted ? (
+                {allCompleted ? (
                   <View style={styles.completedCard}>
                     <Text style={styles.completedIcon}>✓</Text>
                     <Text style={styles.completedTitle}>
@@ -271,7 +270,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     flex: 1,
   },
-  columnLabelWarn: { color: Colors.statusInReview },
+  columnLabelBlocked: { color: Colors.statusBlocked },
   columnLabelDone: { color: Colors.statusCompleted },
   countBadge: {
     backgroundColor: Colors.surfaceContainerHigh,
@@ -279,12 +278,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  countBadgeWarn: { backgroundColor: Colors.statusInReviewBg },
+  countBadgeBlocked: { backgroundColor: Colors.statusBlockedBg },
   countBadgeDone: { backgroundColor: Colors.statusCompletedBg },
   countText: { ...Typography.labelCaps, color: Colors.onSurface, fontSize: 10 },
-  countTextWarn: { color: Colors.statusInReview },
+  countTextBlocked: { color: Colors.statusBlocked },
   countTextDone: { color: Colors.statusCompleted },
-  bottleneckIcon: { fontSize: 14, color: Colors.statusInReview },
+  blockedIcon: { fontSize: 14, color: Colors.statusBlocked },
   card: {
     backgroundColor: Colors.surfaceContainerLowest,
     borderRadius: BorderRadius.xl,

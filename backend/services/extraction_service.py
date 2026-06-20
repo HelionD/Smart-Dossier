@@ -41,10 +41,10 @@ FIELD_SCHEMA = {
     "income_bracket":  "income category, economic group, or income classification of the applicant",
     "family_size":     "number of family members, household size, or number of dependants",
 }
-
-# Maximum characters to pass to GLiNER2 — the model has a token limit,
-# and headers/first page typically contain all the fields we need.
+# Maximum characters to pass to GLiNER2 — the model has a token limit.
+# Head+tail strategy: first 2/3 + last 1/3 to catch fields on any page.
 MAX_CHARS = 3000
+
 
 
 @lru_cache(maxsize=1)
@@ -63,33 +63,48 @@ def _get_gliner2():
         logger.warning("GLiNER2 load failed (%s) — falling back to regex", e)
         return None
 
-
 def _extract_with_gliner2(text: str) -> dict:
     """
-    Run GLiNER2 structured extraction on a text chunk.
+    Run GLiNER2 structured extraction via extract_json.
 
-    GLiNER2's schema-driven interface accepts a dict of {field_name: description}
-    and returns a dict of {field_name: extracted_value | None}.
+    GLiNER2 extract_json expects structures in the format:
+      { parent_key: [ "field::str::description", ... ] }
+
+    Returns a flat dict of {field_name: extracted_value | None}.
     """
     model = _get_gliner2()
     if model is None:
         return {}
 
-    truncated = text[:MAX_CHARS]
+    # Head + tail strategy — key fields often appear on first or last page.
+    if len(text) > MAX_CHARS:
+        truncated = text[:MAX_CHARS * 2 // 3] + "\n...\n" + text[-MAX_CHARS // 3:]
+    else:
+        truncated = text
+
+    # Build extract_json structures from FIELD_SCHEMA
+    structures = {
+        "extraction": [
+            f"{field}::str::{desc}"
+            for field, desc in FIELD_SCHEMA.items()
+        ]
+    }
 
     try:
-        # GLiNER2 structured extraction API
-        result = model.extract_structured(
+        raw = model.extract_json(
             text=truncated,
-            schema=FIELD_SCHEMA,
-            threshold=0.45,   # confidence threshold — lower = more recall, higher = more precision
+            structures=structures,
+            threshold=0.45,
         )
+        # extract_json returns {"extraction": [{field: value, ...}]}
+        items = raw.get("extraction", [])
+        result = items[0] if items else {}
         # Normalise: cast family_size to int if present
         if result.get("family_size"):
             try:
                 result["family_size"] = int(str(result["family_size"]).strip().split()[0])
             except (ValueError, AttributeError):
-                result["family_size"] = None
+                result.pop("family_size", None)
         return {k: v for k, v in result.items() if v}
     except Exception as e:
         logger.warning("GLiNER2 extraction error: %s", e)
@@ -101,18 +116,20 @@ def _extract_with_gliner2(text: str) -> dict:
 
 _REGEX_PATTERNS: dict[str, list[str]] = {
     "owner_name": [
-        r"(?:owner|applicant|full\s+name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)",
-        r"(?:name)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)",
+        # Albanian names: "Emri Mbiemri", "EMRI MBIEMRI", "Emri-Mbiemri"
+        r"(?:owner|applicant|full\s+name)[:\s]+([A-Z][A-Za-z\u00C0-\u024F\-']+(?:\s+[A-Z][A-Za-z\u00C0-\u024F\-']+)+)",
+        r"(?:name)[:\s]+([A-Z][A-Za-z\u00C0-\u024F\-']+(?:\s+[A-Z][A-Za-z\u00C0-\u024F\-']+)+)",
     ],
     "property_id": [
         r"(?:property\s+id|property\s+number|cadastral\s+(?:no|number)|parcel\s+(?:id|no))[:\s]+([A-Z0-9\-/]+)",
         r"(?:asset\s+id|reference\s+no)[:\s]+([A-Z0-9\-/]{4,20})",
     ],
     "zone": [
-        r"(?:zone|district|neighborhood|location|address)[:\s]+([^\n,]{4,60})",
+        # Allow commas for multi-part zone names like "Vasil Shanto Zone, Tirana"
+        r"(?:zone|district|neighborhood|location|address)[:\s]+([^\n]{4,80})",
     ],
     "income_bracket": [
-        r"(?:income\s+(?:category|bracket|group|class)|economic\s+group)[:\s]+([^\n,]{2,30})",
+        r"(?:income\s+(?:category|bracket|group|class)|economic\s+group)[:\s]+([^\n]{2,30})",
     ],
     "family_size": [
         r"(?:family\s+(?:members?|size)|household\s+size|number\s+of\s+(?:dependants?|members?))[:\s]+(\d+)",
@@ -168,5 +185,28 @@ async def extract_fields(markdown_text: str) -> dict:
 
 
 def warm_up() -> None:
-    """Pre-load GLiNER2 at startup."""
-    _get_gliner2()
+    """Pre-load GLiNER2 and run a smoke test at startup."""
+    model = _get_gliner2()
+    if model is None:
+        return
+    # Smoke test: verify the model can actually extract, not just load.
+    try:
+        test_text = "Owner: John Doe. Property ID: ABC-12345. Zone: Tirana Center."
+        structures = {
+            "extraction": [
+                "owner_name::str::full name of the property owner",
+                "property_id::str::property identification number",
+                "zone::str::zone or district",
+            ]
+        }
+        raw = model.extract_json(text=test_text, structures=structures, threshold=0.3)
+        items = raw.get("extraction", [])
+        result = items[0] if items else {}
+        logger.info("GLiNER2 smoke test: %d fields extracted from sample", len(result))
+        if not result:
+            logger.warning(
+                "GLiNER2 smoke test returned no fields — "
+                "extraction may be degraded. Check model and threshold."
+            )
+    except Exception as e:
+        logger.warning("GLiNER2 smoke test failed: %s — extraction degraded", e)

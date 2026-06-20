@@ -19,7 +19,6 @@ import {
   Spacing,
   BorderRadius,
   PHASE_LABELS,
-  BOTTLENECK_PHASES,
   getCaseStatusVisual,
 } from "../constants/design";
 import type { Case } from "../types";
@@ -51,6 +50,10 @@ export default function CasesScreen() {
       )
     : items;
 
+  // Phases that currently have at least one blocked case — drives filter chip coloring
+  const blockedPhases = new Set(
+    items.filter((c) => c.is_blocked).map((c) => c.current_phase),
+  );
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -70,9 +73,8 @@ export default function CasesScreen() {
         />
       </View>
 
-      {/* Phase filter chips — this highlights phases that are *historically*
-          slow (workflow knowledge), not the live status of any single case.
-          Individual case rows below get their color from actual status. */}
+      {/* Phase filter chips — coloring reflects whether any case in that phase
+          is currently blocked (red), not a static bottleneck-phase list. */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -95,16 +97,18 @@ export default function CasesScreen() {
             All
           </Text>
         </TouchableOpacity>
-        {[1, 2, 3, 4, 5, 6, 7].map((p) => (
+        {[1, 2, 3, 4, 5, 6, 7].map((p) => {
+          const isBlockedPhase = blockedPhases.has(p);
+          return (
           <TouchableOpacity
             key={p}
             style={[
               styles.filterChip,
               selectedPhase === p && styles.filterChipActive,
-              BOTTLENECK_PHASES.includes(p) && styles.filterChipWarn,
-              BOTTLENECK_PHASES.includes(p) &&
+              isBlockedPhase && styles.filterChipBlocked,
+              isBlockedPhase &&
                 selectedPhase === p &&
-                styles.filterChipWarnActive,
+                styles.filterChipBlockedActive,
             ]}
             onPress={() => setSelectedPhase(selectedPhase === p ? null : p)}
           >
@@ -112,12 +116,16 @@ export default function CasesScreen() {
               style={[
                 styles.filterChipText,
                 selectedPhase === p && styles.filterChipTextActive,
+                isBlockedPhase && styles.filterChipTextBlocked,
+                isBlockedPhase &&
+                  selectedPhase === p &&
+                  styles.filterChipTextBlockedActive,
               ]}
             >
               F{p}
             </Text>
           </TouchableOpacity>
-        ))}
+        )})}
       </ScrollView>
 
       {/* List */}
@@ -253,8 +261,8 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start", // backup safeguard against stretch
   },
   filterChipActive: { backgroundColor: Colors.secondary },
-  filterChipWarn: { borderColor: Colors.statusInReview },
-  filterChipWarnActive: { backgroundColor: Colors.statusInReview },
+  filterChipBlocked: { borderColor: Colors.statusBlocked, borderWidth: 1.5 },
+  filterChipBlockedActive: { backgroundColor: Colors.statusBlocked, borderColor: Colors.statusBlocked },
   filterChipText: {
     ...Typography.labelCaps,
     color: Colors.onPrimary,
@@ -262,6 +270,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   filterChipTextActive: { color: Colors.onSecondary },
+  filterChipTextBlocked: { color: Colors.statusBlocked },
+  filterChipTextBlockedActive: { color: Colors.onPrimary },
   list: { flex: 1 },
   listContent: { padding: Spacing.marginPage, gap: 10, paddingBottom: 32 },
   empty: { alignItems: "center", padding: 48 },
