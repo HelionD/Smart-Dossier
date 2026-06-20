@@ -85,6 +85,7 @@ export interface CreateCaseRequest {
   property_id?: string;
   zone?: string;
   income_bracket?: string;
+  citizen_id?: string;
 }
 
 export interface AdvancePhaseRequest {

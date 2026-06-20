@@ -5,11 +5,11 @@ import {
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { cases } from '../api/services';
+import { cases, auth } from '../api/services';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/design';
 
-const INCOME_OPTIONS = ['Category A (0–30,000 ALL)', 'Category B (30,001–60,000 ALL)', 'Category C (60,001+ ALL)'];
-const ZONE_OPTIONS = ['Zone 1 – Center', 'Zone 2 – Suburb', 'Zone 3 – Village', 'Zone 4 – Industrial'];
+const INCOME_OPTIONS = ['Category A (0-30,000 ALL)', 'Category B (30,001-60,000 ALL)', 'Category C (60,001+ ALL)'];
+const ZONE_OPTIONS = ['Zone 1 - Center', 'Zone 2 - Suburb', 'Zone 3 - Village', 'Zone 4 - Industrial'];
 
 export default function NewCaseScreen() {
   const qc = useQueryClient();
@@ -19,8 +19,50 @@ export default function NewCaseScreen() {
   const [zone, setZone] = useState('');
   const [incomeBracket, setIncomeBracket] = useState('');
 
+  // Citizen account linking
+  const [citizenEmail, setCitizenEmail] = useState('');
+  const [linkedCitizenId, setLinkedCitizenId] = useState<string | null>(null);
+  const [linkedCitizenName, setLinkedCitizenName] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  const handleLookup = async () => {
+    const email = citizenEmail.trim();
+    if (!email) return;
+    setLookupError(null);
+    setIsLookingUp(true);
+    try {
+      const user = await auth.lookupUser(email);
+      setLinkedCitizenId(user.id);
+      setLinkedCitizenName(user.full_name);
+      if (!ownerName.trim()) {
+        setOwnerName(user.full_name);
+      }
+    } catch (e: any) {
+      setLookupError(e?.response?.data?.detail ?? 'No user found with that email');
+      setLinkedCitizenId(null);
+      setLinkedCitizenName(null);
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+
+  const handleClearLink = () => {
+    setCitizenEmail('');
+    setLinkedCitizenId(null);
+    setLinkedCitizenName(null);
+    setLookupError(null);
+  };
+
   const mutation = useMutation({
-    mutationFn: () => cases.create({ title, owner_name: ownerName, property_id: propertyId, zone, income_bracket: incomeBracket }),
+    mutationFn: () => cases.create({
+      title,
+      owner_name: ownerName,
+      property_id: propertyId,
+      zone,
+      income_bracket: incomeBracket,
+      citizen_id: linkedCitizenId ?? undefined,
+    }),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['cases'] });
       Alert.alert('Case created', `Code: ${data.code}`, [
@@ -39,7 +81,7 @@ export default function NewCaseScreen() {
     <View style={styles.root}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
+          <Text style={styles.backArrow}>{'←'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Case</Text>
       </View>
@@ -51,7 +93,48 @@ export default function NewCaseScreen() {
           </Text>
         </View>
 
-        <Field label="Case Title *" hint="e.g. Hoxha Family – Apt 4B, Block">
+        {/* Citizen Account Link */}
+        <View style={styles.citizenLinkCard}>
+          <Text style={styles.citizenLinkLabel}>Link to Citizen Account</Text>
+          <Text style={styles.citizenLinkHint}>Optional — ties the case to a citizen's account so they can track it.</Text>
+          {!linkedCitizenId ? (
+            <View style={styles.citizenLookupRow}>
+              <TextInput
+                style={styles.citizenEmailInput}
+                value={citizenEmail}
+                onChangeText={(t) => { setCitizenEmail(t); setLookupError(null); }}
+                placeholder="citizen@email.com"
+                placeholderTextColor={Colors.outline}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLookingUp}
+              />
+              <TouchableOpacity
+                style={[styles.findBtn, (!citizenEmail.trim() || isLookingUp) && styles.findBtnDisabled]}
+                onPress={handleLookup}
+                disabled={!citizenEmail.trim() || isLookingUp}
+                activeOpacity={0.7}
+              >
+                {isLookingUp
+                  ? <ActivityIndicator size="small" color={Colors.onSecondary} />
+                  : <Text style={styles.findBtnText}>Find</Text>}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.linkedRow}>
+              <View style={styles.linkedInfo}>
+                <Text style={styles.linkedIcon}>{'✓'}</Text>
+                <Text style={styles.linkedName}>{linkedCitizenName}</Text>
+              </View>
+              <TouchableOpacity onPress={handleClearLink} style={styles.clearLinkBtn}>
+                <Text style={styles.clearLinkText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {lookupError && <Text style={styles.lookupError}>{lookupError}</Text>}
+        </View>
+
+        <Field label="Case Title *" hint="e.g. Hoxha Family - Apt 4B, Block">
           <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Case title" placeholderTextColor={Colors.outline} />
         </Field>
 
@@ -139,6 +222,54 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.marginPage, gap: Spacing.stackMd, paddingBottom: 48 },
   infoBox: { backgroundColor: Colors.statusOnTrackBg, borderRadius: BorderRadius.md, padding: 14, borderLeftWidth: 4, borderLeftColor: Colors.secondary },
   infoText: { ...Typography.bodySm, color: Colors.secondary, lineHeight: 20 },
+  // Citizen link card
+  citizenLinkCard: {
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    padding: 14,
+    gap: 8,
+  },
+  citizenLinkLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant },
+  citizenLinkHint: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12 },
+  citizenLookupRow: { flexDirection: 'row', gap: 8 },
+  citizenEmailInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 12,
+    ...Typography.bodyLg,
+    color: Colors.onSurface,
+    backgroundColor: Colors.background,
+  },
+  findBtn: {
+    height: 44,
+    paddingHorizontal: 18,
+    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  findBtnDisabled: { opacity: 0.5 },
+  findBtnText: { ...Typography.labelCaps, color: Colors.onSecondary, fontSize: 13 },
+  linkedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.statusOnTrackBg,
+    borderRadius: BorderRadius.md,
+    padding: 10,
+  },
+  linkedInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  linkedIcon: { color: Colors.statusCompleted, fontSize: 16 },
+  linkedName: { ...Typography.bodyLg, color: Colors.onSurface },
+  clearLinkBtn: { paddingHorizontal: 12, paddingVertical: 6 },
+  clearLinkText: { ...Typography.bodySm, color: Colors.error, fontSize: 13 },
+  lookupError: { ...Typography.bodySm, color: Colors.error, fontSize: 12 },
+  // Form fields
   field: { gap: 6 },
   fieldLabel: { ...Typography.labelCaps, color: Colors.onSurfaceVariant },
   fieldHint: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12, marginTop: -2 },
@@ -160,4 +291,3 @@ const styles = StyleSheet.create({
   submitBtnText: { ...Typography.headlineSm, color: Colors.onSecondary, fontSize: 16 },
   requiredNote: { ...Typography.bodySm, color: Colors.onSurfaceVariant, fontSize: 12, textAlign: 'center' },
 });
-

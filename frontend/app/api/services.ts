@@ -11,6 +11,10 @@ export const auth = {
     apiClient.post<AuthTokens>('/auth/login', body).then(r => r.data),
   register: (body: RegisterRequest) =>
     apiClient.post<AuthTokens>('/auth/register', body).then(r => r.data),
+  lookupUser: (email: string) =>
+    apiClient.get<import('../types').User>(`/auth/lookup?email=${encodeURIComponent(email)}`).then(r => r.data),
+  listUsers: (params?: { email?: string; role?: string }) =>
+    apiClient.get<import('../types').User[]>('/auth/users', { params }).then(r => r.data),
 };
 
 // ─── Cases ─────────────────────────────────────────────────────────────────
